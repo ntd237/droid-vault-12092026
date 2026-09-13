@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+docs/
+PROMPT.md
+src-tauri/target/
+src-tauri/target-*/
