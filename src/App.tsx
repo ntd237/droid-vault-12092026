@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import appIcon from "./assets/app-icon.png";
 import ActionBar from "./components/ActionBar";
 import AppList from "./components/AppList";
 import AppTabs from "./components/AppTabs";
@@ -266,7 +267,10 @@ function App() {
   return (
     <div className="flex h-screen flex-col bg-zinc-900 text-zinc-100">
       <header className="flex items-center justify-between gap-4 border-b border-zinc-800 px-4 py-3">
-        <h1 className="text-lg font-semibold">Droid Vault</h1>
+        <div className="flex items-center gap-3">
+          <img src={appIcon} alt="Droid Vault Icon" className="h-7 w-7 rounded-md object-contain" />
+          <h1 className="text-lg font-semibold tracking-wide">Droid Vault</h1>
+        </div>
         <StatusBar status={status} device={device} adbError={adbError} ready={ready} />
       </header>
 
