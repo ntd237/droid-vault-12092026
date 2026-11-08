@@ -45,6 +45,36 @@ jobs:
           Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePass | Out-Null
           Remove-Item $pfxPath -Force
 
+      # The Tauri bundler downloads the NSIS toolset from GitHub Releases with
+      # no retry; when the release-download endpoint flaps 504 the whole build
+      # fails. Pre-cache it here with aggressive retries instead.
+      - name: Pre-cache NSIS toolset
+        run: |
+          $tools = Join-Path $env:LOCALAPPDATA "tauri"
+          $nsisDir = Join-Path $tools "NSIS"
+          if (Test-Path (Join-Path $nsisDir "Bin\makensis.exe")) {
+            Write-Host "NSIS toolset already cached"
+            exit 0
+          }
+          $zip = Join-Path $env:RUNNER_TEMP "nsis-3.11.zip"
+          $expected = "EF7FF767E5CBD9EDD22ADD3A32C9B8F4500BB10D"
+          $ok = $false
+          for ($i = 1; $i -le 15; $i++) {
+            curl.exe -fsSL --max-time 300 -o $zip "https://github.com/tauri-apps/binary-releases/releases/download/nsis-3.11/nsis-3.11.zip"
+            if ($LASTEXITCODE -eq 0 -and (Get-FileHash $zip -Algorithm SHA1).Hash -eq $expected) {
+              $ok = $true
+              break
+            }
+            Write-Host "NSIS download attempt $i failed, retrying in 8s"
+            Start-Sleep -Seconds 8
+          }
+          if (-not $ok) { throw "Failed to download NSIS toolset after 15 attempts" }
+          $extract = Join-Path $env:RUNNER_TEMP "nsis-extract"
+          Expand-Archive -Path $zip -DestinationPath $extract -Force
+          New-Item -ItemType Directory -Force -Path $tools | Out-Null
+          Move-Item (Join-Path $extract "nsis-3.11") $nsisDir
+          Write-Host "NSIS toolset pre-cached at $nsisDir"
+
       - name: Build and release
         uses: tauri-apps/tauri-action@v0
         env:
