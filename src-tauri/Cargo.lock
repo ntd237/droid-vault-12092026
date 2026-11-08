@@ -1048,7 +1048,7 @@ dependencies = [
 
 [[package]]
 name = "droid-vault"
-version = "0.2.9"
+version = "0.2.10"
 dependencies = [
  "apk-info",
  "apk-info-xml",
