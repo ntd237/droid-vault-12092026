@@ -2,7 +2,7 @@
 
 > Quản lý ứng dụng Android qua ADB trên Windows: xem danh sách với icon và tên thật, phân loại User/System apps, gỡ cài đặt giữ dữ liệu và khôi phục an toàn.
 
-[![Version](https://img.shields.io/badge/version-0.2.6-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-0.2.7-blue.svg)](package.json)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-lightgrey.svg)](#yêu-cầu-hệ-thống)
 [![Tauri](https://img.shields.io/badge/tauri-v2-orange.svg)](https://tauri.app/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)

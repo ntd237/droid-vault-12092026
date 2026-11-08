@@ -45,7 +45,7 @@ export default function AppTabs({
                 key={key}
                 type="button"
                 onClick={() => onTabChange(key)}
-                className={`-mb-px border-b-2 px-4 pb-3 text-sm font-medium tracking-wide transition-colors ${
+                className={`-mb-px whitespace-nowrap border-b-2 px-4 pb-3 text-sm font-medium tracking-wide transition-colors ${
                   isActive
                     ? "border-red-600 text-red-600 dark:text-red-400"
                     : "border-transparent text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -66,8 +66,8 @@ export default function AppTabs({
           })}
         </div>
 
-        <div className="relative -top-1.5 flex items-center gap-2">
-          <div className="relative flex items-center">
+        <div className="relative -top-1.5 flex shrink-0 items-center gap-2">
+          <div className="relative flex shrink-0 items-center">
             <svg
               viewBox="0 0 16 16"
               aria-hidden
