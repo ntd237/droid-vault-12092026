@@ -19,10 +19,11 @@ export default function AppList({ apps, selected, onToggle, emptyText }: AppList
 
   // Grid auto-placement fills row-major (left to right, then next row), so the
   // A-Z order keeps reading top rows before lower rows in every layout.
-  // Columns scale with window size: 1 (<lg) -> 2 (lg) -> 3 (2xl). Rows keep
+  // Columns scale with window size: 1 (<900px) -> 2 (>=900px, the window's
+  // minWidth, so two snug columns are always on screen) -> 3 (2xl). Rows keep
   // full name/package text via truncate only as a rare-overflow guard.
   return (
-    <ul className="grid grid-cols-1 items-start gap-x-6 lg:grid-cols-2 2xl:grid-cols-3">
+    <ul className="grid grid-cols-1 items-start gap-x-6 min-[900px]:grid-cols-2 2xl:grid-cols-3">
       {apps.map((app) => (
         <AppRow
           key={app.package}

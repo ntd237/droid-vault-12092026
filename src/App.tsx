@@ -300,7 +300,7 @@ function App() {
         </div>
       </header>
 
-      <main className="flex min-h-0 flex-1 flex-col p-4">
+      <main className="flex min-h-0 flex-1 flex-col px-4">
         {!ready && !hasList && (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-zinc-500 dark:text-zinc-400">Đang quét thiết bị…</p>
