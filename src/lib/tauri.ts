@@ -30,6 +30,10 @@ export function getConfig(): Promise<AppConfig> {
   return invoke("get_config");
 }
 
+export function saveTheme(theme: "light" | "dark"): Promise<void> {
+  return invoke("set_theme", { theme });
+}
+
 // ---- Events ----
 
 export function listenBatchProgress(

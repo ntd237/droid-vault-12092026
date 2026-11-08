@@ -37,17 +37,17 @@ export default function ProgressLog({
   }, [running, onDismiss]);
 
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-800/40 p-4">
+    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-800/40">
       <div className="flex items-center justify-between gap-2 text-sm">
-        <span className="font-medium text-zinc-200">
+        <span className="font-medium text-zinc-800 dark:text-zinc-200">
           {running ? "Đang xử lý…" : "Kết quả thao tác"}
         </span>
-        <span className="font-mono text-zinc-400">
+        <span className="font-mono text-zinc-500 dark:text-zinc-400">
           {current}/{total}
         </span>
       </div>
 
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-700">
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
         <div
           className="h-full rounded-full bg-red-600 transition-all"
           style={{ width: `${percent}%` }}
@@ -55,7 +55,7 @@ export default function ProgressLog({
       </div>
 
       {error && (
-        <p className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm text-red-400">
+        <p className="mt-3 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm text-red-600 dark:text-red-400">
           {error}
         </p>
       )}
@@ -63,7 +63,10 @@ export default function ProgressLog({
       {results.length > 0 && (
         <ul className="mt-3 max-h-40 space-y-0.5 overflow-y-auto font-mono text-xs">
           {results.map((r) => (
-            <li key={r.package} className={r.success ? "text-green-400" : "text-red-400"}>
+            <li
+              key={r.package}
+              className={r.success ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}
+            >
               {r.success
                 ? `✓ ${labels.get(r.package) ?? r.package}`
                 : `✗ ${r.package}: ${r.message}`}
@@ -73,9 +76,9 @@ export default function ProgressLog({
       )}
 
       {summary && (
-        <p className="mt-3 text-sm text-zinc-300">
-          Hoàn tất: <span className="text-green-400">{summary.success} thành công</span>,{" "}
-          <span className="text-red-400">{summary.failure} thất bại</span>
+        <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-300">
+          Hoàn tất: <span className="text-green-600 dark:text-green-400">{summary.success} thành công</span>,{" "}
+          <span className="text-red-600 dark:text-red-400">{summary.failure} thất bại</span>
         </p>
       )}
     </div>

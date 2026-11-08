@@ -645,6 +645,18 @@ pub fn get_config(app: AppHandle) -> Result<config::AppConfig, String> {
     load_config(&app)
 }
 
+/// Persists the UI theme ("light" | "dark") into config.json.
+#[tauri::command]
+pub fn set_theme(app: AppHandle, theme: String) -> Result<(), String> {
+    if theme != "light" && theme != "dark" {
+        return Err(format!("Giá trị theme không hợp lệ: {theme}"));
+    }
+    let dir = app_data_dir(&app)?;
+    let mut cfg = load_config(&app)?;
+    cfg.theme = theme;
+    config::save(&dir, &cfg).map_err(|e| format!("Không ghi được config.json: {e}"))
+}
+
 /// Shared batch flow: busy-guard, device resolution, blacklist from config,
 /// blocking `run_batch` with progress/result events. The busy guard is
 /// released on every path via `BusyLease`'s Drop.

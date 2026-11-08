@@ -6,7 +6,9 @@ import AppTabs from "./components/AppTabs";
 import ConfirmDialog from "./components/ConfirmDialog";
 import ProgressLog from "./components/ProgressLog";
 import StatusBar from "./components/StatusBar";
+import ThemeToggle from "./components/ThemeToggle";
 import { useDevicePolling } from "./hooks/useDevicePolling";
+import { useTheme } from "./hooks/useTheme";
 import {
   getApps,
   listenAppResolved,
@@ -21,9 +23,9 @@ import "./App.css";
 function DevicePlaceholder({ status }: { status: "unauthorized" | "none" }) {
   if (status === "unauthorized") {
     return (
-      <div className="max-w-xl rounded-xl border border-amber-500/30 bg-zinc-800/40 p-6">
-        <h2 className="text-lg font-semibold text-amber-300">Chưa được phép</h2>
-        <p className="mt-2 text-zinc-400">
+      <div className="max-w-xl rounded-xl border border-amber-500/30 bg-zinc-100/60 p-6 dark:bg-zinc-800/40">
+        <h2 className="text-lg font-semibold text-amber-700 dark:text-amber-300">Chưa được phép</h2>
+        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
           Mở điện thoại và bấm &laquo;Cho phép&raquo; để xác nhận gỡ lỗi USB.
         </p>
       </div>
@@ -31,9 +33,9 @@ function DevicePlaceholder({ status }: { status: "unauthorized" | "none" }) {
   }
 
   return (
-    <div className="max-w-xl rounded-xl border border-zinc-800 bg-zinc-800/40 p-6">
-      <h2 className="text-lg font-semibold text-zinc-200">Chưa có thiết bị</h2>
-      <p className="mt-2 text-zinc-400">
+    <div className="max-w-xl rounded-xl border border-zinc-200 bg-zinc-100/60 p-6 dark:border-zinc-800 dark:bg-zinc-800/40">
+      <h2 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">Chưa có thiết bị</h2>
+      <p className="mt-2 text-zinc-600 dark:text-zinc-400">
         Bật &laquo;Gỡ lỗi USB&raquo; trên điện thoại và cắm cáp để bắt đầu.
       </p>
     </div>
@@ -51,6 +53,7 @@ function Spinner({ className = "h-5 w-5" }: { className?: string }) {
 
 function App() {
   const { status, device, adbError, ready } = useDevicePolling();
+  const { theme, toggleTheme } = useTheme();
 
   const [apps, setApps] = useState<AppInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -265,13 +268,16 @@ function App() {
   const hasList = apps !== null || (loading && status === "connected");
 
   return (
-    <div className="flex h-screen flex-col bg-zinc-900 text-zinc-100">
-      <header className="flex items-center justify-between gap-4 border-b border-zinc-800 px-4 py-3">
+    <div className="flex h-screen flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
+      <header className="flex items-center justify-between gap-4 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
         <div className="flex items-center gap-3">
           <img src={appIcon} alt="Droid Vault Icon" className="h-7 w-7 rounded-md object-contain" />
           <h1 className="text-lg font-semibold tracking-wide">Droid Vault</h1>
         </div>
-        <StatusBar status={status} device={device} adbError={adbError} ready={ready} />
+        <div className="flex items-center gap-3">
+          <StatusBar status={status} device={device} adbError={adbError} ready={ready} />
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </div>
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col p-4">
@@ -292,7 +298,7 @@ function App() {
 
         {!ready && !hasList && (
           <div className="flex flex-1 items-center justify-center">
-            <p className="text-zinc-400">Đang quét thiết bị…</p>
+            <p className="text-zinc-500 dark:text-zinc-400">Đang quét thiết bị…</p>
           </div>
         )}
 
@@ -307,18 +313,18 @@ function App() {
             {(apps !== null && (loading || scanError || deviceLost)) && (
               <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
                 {loading && apps !== null && (
-                  <span className="flex items-center gap-2 rounded-md border border-zinc-700 bg-zinc-800/60 px-3 py-1 text-zinc-300">
+                  <span className="flex items-center gap-2 rounded-md border border-zinc-300 bg-zinc-100 px-3 py-1 text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300">
                     <Spinner className="h-3.5 w-3.5" />
                     Đang tải danh sách ứng dụng…
                   </span>
                 )}
                 {deviceLost && (
-                  <span className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-amber-300">
+                  <span className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-amber-700 dark:text-amber-300">
                     Thiết bị đã ngắt kết nối — danh sách đã tải vẫn được giữ
                   </span>
                 )}
                 {scanError && (
-                  <span className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-1 text-red-400">
+                  <span className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-1 text-red-600 dark:text-red-400">
                     Lỗi quét: {scanError}
                   </span>
                 )}
@@ -329,7 +335,7 @@ function App() {
               <div className="flex flex-1 items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
                   <Spinner />
-                  <p className="text-zinc-400">
+                  <p className="text-zinc-500 dark:text-zinc-400">
                     Đang tải danh sách ứng dụng… Lần đầu có thể mất vài phút
                   </p>
                 </div>
@@ -363,7 +369,7 @@ function App() {
         )}
       </main>
 
-      <footer className="border-t border-zinc-800 px-4 py-3">
+      <footer className="border-t border-zinc-200 px-4 py-3 dark:border-zinc-800">
         <ActionBar
           selectedCount={selected.size}
           running={running}

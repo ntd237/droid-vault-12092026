@@ -18,7 +18,8 @@ pub fn run() {
             commands::get_apps,
             commands::uninstall_apps,
             commands::restore_apps,
-            commands::get_config
+            commands::get_config,
+            commands::set_theme
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

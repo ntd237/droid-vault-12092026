@@ -16,14 +16,14 @@ export default function AppRow({ app, selected, onToggle }: AppRowProps) {
       <button
         type="button"
         onClick={() => onToggle(app.package)}
-        className={`flex w-full items-center gap-3 px-3 py-2 text-left transition-colors ${
-          selected ? "bg-red-500/10" : "hover:bg-zinc-800/60"
+        className={`flex w-full items-center gap-3 border-b border-zinc-200 px-3 py-2 text-left transition-colors dark:border-zinc-800/60 ${
+          selected ? "bg-red-500/10" : "hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
         } ${!app.installed ? "opacity-45" : "opacity-100"}`}
       >
         <span
           aria-hidden
           className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-            selected ? "border-red-500 bg-red-600" : "border-zinc-600"
+            selected ? "border-red-500 bg-red-600" : "border-zinc-400 dark:border-zinc-600"
           }`}
         >
           {selected && (
@@ -43,16 +43,16 @@ export default function AppRow({ app, selected, onToggle }: AppRowProps) {
           <img
             src={iconSrc}
             alt=""
-            className="h-10 w-10 shrink-0 rounded-lg bg-zinc-800 object-contain p-0.5"
+            className="h-10 w-10 shrink-0 rounded-lg bg-zinc-200 object-contain p-0.5 dark:bg-zinc-800"
           />
         ) : (
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-700 text-sm font-semibold text-zinc-300">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-200 text-sm font-semibold text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
             {app.label.charAt(0).toUpperCase()}
           </span>
         )}
 
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium text-zinc-100">
+          <span className="block truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
             {app.label}
           </span>
           <span className="block truncate font-mono text-xs text-zinc-500">
@@ -64,8 +64,8 @@ export default function AppRow({ app, selected, onToggle }: AppRowProps) {
           <span
             className={`shrink-0 rounded-md border px-2 py-0.5 text-xs ${
               app.restorable
-                ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
-                : "border-zinc-600/60 bg-zinc-700/30 text-zinc-400"
+                ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                : "border-zinc-300 bg-zinc-100 text-zinc-500 dark:border-zinc-600/60 dark:bg-zinc-700/30 dark:text-zinc-400"
             }`}
           >
             {app.restorable ? "Đã gỡ (khôi phục được)" : "Đã gỡ"}

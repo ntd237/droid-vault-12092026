@@ -43,35 +43,35 @@ export default function ConfirmDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-lg rounded-xl border border-zinc-700 bg-zinc-900 p-6 shadow-xl">
-        <h2 className="text-lg font-semibold text-zinc-100">
+      <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
           {isUninstall ? "Xác nhận gỡ cài đặt" : "Xác nhận khôi phục"}
         </h2>
 
-        <p className="mt-2 text-sm text-zinc-400">
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
           {isUninstall ? "Bạn sắp gỡ cài đặt" : "Bạn sắp khôi phục"}{" "}
-          <span className="font-semibold text-zinc-100">{apps.length}</span> ứng
+          <span className="font-semibold text-zinc-900 dark:text-zinc-100">{apps.length}</span> ứng
           dụng sau:
         </p>
 
-        <ul className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-800/40 p-2">
+        <ul className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-800/40">
           {apps.map((app) => (
             <li key={app.package} className="px-1 py-0.5 text-sm">
-              <span className="text-zinc-200">{app.label}</span>{" "}
+              <span className="text-zinc-800 dark:text-zinc-200">{app.label}</span>{" "}
               <span className="font-mono text-xs text-zinc-500">{app.package}</span>
             </li>
           ))}
         </ul>
 
         {isUninstall && hasSystemApp && (
-          <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-300">
+          <div className="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
             Bạn đang gỡ ứng dụng hệ thống — rủi ro làm lỗi thiết bị. Hãy chắc
             chắn bạn hiểu rõ.
           </div>
         )}
 
         {blacklistedPkgs.length > 0 && (
-          <div className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-400">
+          <div className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
             Các ứng dụng sau thuộc danh sách cấm gỡ và sẽ bị bỏ qua:{" "}
             <span className="font-mono text-xs">{blacklistedPkgs.join(", ")}</span>
           </div>
@@ -81,7 +81,7 @@ export default function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-zinc-700 px-4 py-1.5 text-sm text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100"
+            className="rounded-lg border border-zinc-300 px-4 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-500 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-zinc-100"
           >
             Hủy
           </button>

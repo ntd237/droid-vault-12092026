@@ -31,7 +31,7 @@ export default function AppTabs({
   const counts: Record<AppKind, number> = { User: userCount, System: systemCount };
 
   return (
-    <div className="border-b border-zinc-800">
+    <div className="border-b border-zinc-200 dark:border-zinc-800">
       <div className="flex items-center justify-between gap-4 px-2">
         <div className="flex">
           {TABS.map(({ key, label }) => {
@@ -43,14 +43,16 @@ export default function AppTabs({
                 onClick={() => onTabChange(key)}
                 className={`-mb-px border-b-2 px-4 py-3 text-sm font-medium tracking-wide transition-colors ${
                   isActive
-                    ? "border-red-600 text-red-400"
-                    : "border-transparent text-zinc-400 hover:text-zinc-200"
+                    ? "border-red-600 text-red-600 dark:text-red-400"
+                    : "border-transparent text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
                 }`}
               >
                 {label}
                 <span
                   className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-normal ${
-                    isActive ? "bg-red-600/20 text-red-300" : "bg-zinc-800 text-zinc-400"
+                    isActive
+                      ? "bg-red-600/20 text-red-600 dark:text-red-300"
+                      : "bg-zinc-200 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400"
                   }`}
                 >
                   {counts[key]}
@@ -65,7 +67,7 @@ export default function AppTabs({
             type="button"
             onClick={onRefresh}
             disabled={refreshDisabled}
-            className="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-500 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-zinc-100"
           >
             {refreshing ? "Đang làm mới…" : "Làm mới"}
           </button>
@@ -74,7 +76,7 @@ export default function AppTabs({
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Tìm kiếm theo tên hoặc tên gói…"
-            className="w-64 rounded-lg border border-zinc-700 bg-zinc-800/60 px-3 py-1.5 text-sm text-zinc-100 placeholder-zinc-500 outline-none focus:border-red-600/60"
+            className="w-64 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-red-600/60 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-100 dark:placeholder-zinc-500"
           />
         </div>
       </div>

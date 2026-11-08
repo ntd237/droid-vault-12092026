@@ -27,3 +27,4 @@ PROMPT.md
 src-tauri/target/
 src-tauri/target-*/
 src-tauri/helper/build/
+tests/

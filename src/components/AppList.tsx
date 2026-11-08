@@ -17,8 +17,11 @@ export default function AppList({ apps, selected, onToggle, emptyText }: AppList
     );
   }
 
+  // Grid auto-placement fills row-major (left to right, then next row), so the
+  // A-Z order keeps reading top rows before lower rows in both 1- and 2-column
+  // layouts. `lg` breakpoint: small window = 1 column, large window = 2.
   return (
-    <ul className="divide-y divide-zinc-800/60">
+    <ul className="grid grid-cols-1 items-start gap-x-6 lg:grid-cols-2">
       {apps.map((app) => (
         <AppRow
           key={app.package}

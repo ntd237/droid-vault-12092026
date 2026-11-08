@@ -21,7 +21,7 @@ fn default_blacklist() -> Vec<String> {
 }
 
 fn default_theme() -> String {
-    "dark".to_string()
+    "light".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -62,6 +62,15 @@ pub fn load_or_create(dir: &Path) -> std::io::Result<AppConfig> {
     let raw = std::fs::read_to_string(&cfg_path)?;
     serde_json::from_str(&raw)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+}
+
+/// Persists `config` as pretty JSON to `<dir>/config.json`.
+pub fn save(dir: &Path, config: &AppConfig) -> std::io::Result<()> {
+    std::fs::create_dir_all(dir)?;
+    let cfg_path = dir.join("config.json");
+    let json = serde_json::to_string_pretty(config)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+    std::fs::write(&cfg_path, json)
 }
 
 /// Resolves the adb binary path (requirement R1):
@@ -108,7 +117,7 @@ mod tests {
         assert_eq!(cfg.blacklist.len(), 6);
         assert_eq!(cfg.blacklist[0], "android");
         assert_eq!(cfg.adb_path, None);
-        assert_eq!(cfg.theme, "dark");
+        assert_eq!(cfg.theme, "light");
         // Written file is valid pretty JSON that parses back to the same config.
         let raw = fs::read_to_string(&cfg_path).unwrap();
         let reparsed: AppConfig = serde_json::from_str(&raw).unwrap();
