@@ -71,7 +71,7 @@ export default function AppTabs({
             <svg
               viewBox="0 0 16 16"
               aria-hidden
-              className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400"
+              className="pointer-events-none absolute left-2 h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.5"
@@ -84,7 +84,7 @@ export default function AppTabs({
               value={filter}
               onChange={(e) => onFilterChange(e.target.value as InstallFilter)}
               aria-label="Lọc theo trạng thái cài đặt"
-              className="appearance-none rounded-lg border border-zinc-300 bg-white py-1.5 pl-8 pr-7 text-sm text-zinc-700 outline-none focus:border-red-600/60 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300"
+              className="appearance-none rounded-lg border border-zinc-300 bg-white py-1.5 pl-7 pr-6 text-sm text-zinc-700 outline-none focus:border-red-600/60 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300"
             >
               <option value="all">Tất cả</option>
               <option value="installed">Đang cài đặt</option>
@@ -93,7 +93,7 @@ export default function AppTabs({
             <svg
               viewBox="0 0 12 12"
               aria-hidden
-              className="pointer-events-none absolute right-2.5 h-3 w-3 text-zinc-500 dark:text-zinc-400"
+              className="pointer-events-none absolute right-1.5 h-3 w-3 text-zinc-500 dark:text-zinc-400"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.5"
@@ -103,21 +103,42 @@ export default function AppTabs({
               <path d="M2.5 4.5 6 8l3.5-3.5" />
             </svg>
           </div>
-          <button
-            type="button"
-            onClick={onRefresh}
-            disabled={refreshDisabled}
-            className="rounded-lg border border-zinc-300 px-3 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-500 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-zinc-100"
-          >
-            {refreshing ? "Đang làm mới…" : "Làm mới"}
-          </button>
           <input
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Tìm kiếm theo tên hoặc tên gói…"
-            className="w-64 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-red-600/60 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-100 dark:placeholder-zinc-500"
+            className="w-60 rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-red-600/60 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-100 dark:placeholder-zinc-500"
           />
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={refreshDisabled}
+            title={refreshing ? "Đang làm mới…" : "Làm mới"}
+            aria-label="Làm mới"
+            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-lg border border-zinc-300 text-zinc-600 transition-colors hover:border-zinc-500 hover:text-zinc-900 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-zinc-100"
+          >
+            {refreshing ? (
+              <span
+                aria-hidden
+                className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent dark:border-zinc-500"
+              />
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                aria-hidden
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
     </div>
