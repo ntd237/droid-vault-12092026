@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import appIcon from "./assets/app-icon.png";
 import ActionBar from "./components/ActionBar";
 import AppList from "./components/AppList";
@@ -62,6 +63,22 @@ function App() {
   const { status, device, adbError, ready } = useDevicePolling();
   const { theme, toggleTheme } = useTheme();
   const { status: updateStatus, progress: updateProgress } = useUpdater();
+  const [appVersion, setAppVersion] = useState<string | null>(null);
+
+  // Version baked into the installed binary at build time (tauri.conf.json).
+  useEffect(() => {
+    let cancelled = false;
+    getVersion()
+      .then((v) => {
+        if (!cancelled) setAppVersion(v);
+      })
+      .catch(() => {
+        // Header badge is cosmetic; hide it when the API is unavailable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const [apps, setApps] = useState<AppInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -293,6 +310,11 @@ function App() {
         <div className="flex items-center gap-3">
           <img src={appIcon} alt="Droid Vault Icon" className="h-7 w-7 rounded-md object-contain" />
           <h1 className="text-lg font-semibold tracking-wide">Droid Vault</h1>
+          {appVersion && (
+            <span className="rounded-md bg-zinc-200 px-1.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+              v{appVersion}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <StatusBar status={status} device={device} adbError={adbError} ready={ready} />
