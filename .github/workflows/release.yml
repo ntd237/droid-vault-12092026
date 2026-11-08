@@ -73,7 +73,26 @@ jobs:
           Expand-Archive -Path $zip -DestinationPath $extract -Force
           New-Item -ItemType Directory -Force -Path $tools | Out-Null
           Move-Item (Join-Path $extract "nsis-3.11") $nsisDir
-          Write-Host "NSIS toolset pre-cached at $nsisDir"
+
+          # The nsis_tauri_utils.dll plugin is NOT part of the NSIS zip; the
+          # bundler downloads it separately and requires it in the cache.
+          $dll = Join-Path $env:RUNNER_TEMP "nsis_tauri_utils.dll"
+          $dllExpected = "75197FEE3C6A814FE035788D1C34EAD39349B860"
+          $dllOk = $false
+          for ($i = 1; $i -le 15; $i++) {
+            curl.exe -fsSL --max-time 120 -o $dll "https://github.com/tauri-apps/nsis-tauri-utils/releases/download/nsis_tauri_utils-v0.5.3/nsis_tauri_utils.dll"
+            if ($LASTEXITCODE -eq 0 -and (Get-FileHash $dll -Algorithm SHA1).Hash -eq $dllExpected) {
+              $dllOk = $true
+              break
+            }
+            Write-Host "nsis_tauri_utils.dll download attempt $i failed, retrying in 8s"
+            Start-Sleep -Seconds 8
+          }
+          if (-not $dllOk) { throw "Failed to download nsis_tauri_utils.dll after 15 attempts" }
+          $dllTarget = Join-Path $nsisDir "Plugins\x86-unicode\additional"
+          New-Item -ItemType Directory -Force -Path $dllTarget | Out-Null
+          Move-Item $dll (Join-Path $dllTarget "nsis_tauri_utils.dll") -Force
+          Write-Host "NSIS toolset fully pre-cached at $nsisDir"
 
       - name: Build and release
         uses: tauri-apps/tauri-action@v0

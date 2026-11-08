@@ -142,12 +142,19 @@ function App() {
     }
   }, []);
 
-  // Background scan when the device connects and apps are not loaded yet.
+  // Auto-scan whenever the active device identity changes: first connect,
+  // re-connect of the same device (retries a failed first scan), and swaps
+  // between devices. A fast A->B swap may never leave the "connected" state —
+  // only the polled serial changes — so the scan key must include the serial.
+  const lastScanKeyRef = useRef<string | null>(null);
+  const connectedSerial = status === "connected" ? (device?.serial ?? null) : null;
+  const scanKey = `${connectedSerial ?? ""}#${connEpoch}`;
   useEffect(() => {
-    if (status === "connected" && apps === null && !loading) {
-      void loadApps();
-    }
-  }, [status, apps, loading, connEpoch, loadApps]);
+    if (status !== "connected" || running) return;
+    if (scanKey === lastScanKeyRef.current) return;
+    lastScanKeyRef.current = scanKey;
+    void loadApps();
+  }, [scanKey, status, running, loadApps]);
 
   // Progressive hydration: the backend streams each app it resolves after
   // the fast listing; merge them into the visible rows in place.
