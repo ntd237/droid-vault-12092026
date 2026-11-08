@@ -66,7 +66,7 @@ export default function AppTabs({
           })}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="relative -top-1.5 flex items-center gap-2">
           <div className="relative flex items-center">
             <svg
               viewBox="0 0 16 16"
