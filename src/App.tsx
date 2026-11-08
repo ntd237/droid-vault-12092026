@@ -18,7 +18,13 @@ import {
   restoreApps,
   uninstallApps,
 } from "./lib/tauri";
-import type { AppInfo, AppKind, BatchProgress, BatchResult } from "./types";
+import type {
+  AppInfo,
+  AppKind,
+  BatchProgress,
+  BatchResult,
+  InstallFilter,
+} from "./types";
 import "./App.css";
 
 function DevicePlaceholder({ status }: { status: "unauthorized" | "none" }) {
@@ -62,6 +68,7 @@ function App() {
   const [scanError, setScanError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<AppKind>("User");
   const [search, setSearch] = useState("");
+  const [installFilter, setInstallFilter] = useState<InstallFilter>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [confirmMode, setConfirmMode] = useState<"uninstall" | "restore" | null>(null);
@@ -170,6 +177,8 @@ function App() {
       .filter(
         (a) =>
           a.kind === activeTab &&
+          (installFilter === "all" ||
+            (installFilter === "installed" ? a.installed : !a.installed)) &&
           (!q ||
             a.label.toLowerCase().includes(q) ||
             a.package.toLowerCase().includes(q)),
@@ -179,7 +188,7 @@ function App() {
           a.label.localeCompare(b.label, undefined, { sensitivity: "base" }) ||
           a.package.localeCompare(b.package),
       );
-  }, [apps, activeTab, search]);
+  }, [apps, activeTab, search, installFilter]);
 
   // Select-all adds every currently-filtered package of the ACTIVE tab.
   const selectAll = useCallback(() => {
@@ -343,8 +352,10 @@ function App() {
                   userCount={userCount}
                   systemCount={systemCount}
                   search={search}
+                  filter={installFilter}
                   onTabChange={setActiveTab}
                   onSearchChange={setSearch}
+                  onFilterChange={setInstallFilter}
                   onRefresh={() => void loadApps()}
                   refreshing={loading}
                   refreshDisabled={loading || running || status !== "connected"}
@@ -355,7 +366,9 @@ function App() {
                     selected={selected}
                     onToggle={toggleApp}
                     emptyText={
-                      search.trim() ? "Không có ứng dụng nào khớp" : "Chưa có ứng dụng nào"
+                      search.trim() || installFilter !== "all"
+                        ? "Không có ứng dụng nào khớp"
+                        : "Chưa có ứng dụng nào"
                     }
                   />
                 </div>

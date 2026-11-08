@@ -1,12 +1,14 @@
-import type { AppKind } from "../types";
+import type { AppKind, InstallFilter } from "../types";
 
 interface AppTabsProps {
   active: AppKind;
   userCount: number;
   systemCount: number;
   search: string;
+  filter: InstallFilter;
   onTabChange: (tab: AppKind) => void;
   onSearchChange: (value: string) => void;
+  onFilterChange: (filter: InstallFilter) => void;
   onRefresh: () => void;
   refreshing: boolean;
   refreshDisabled: boolean;
@@ -22,8 +24,10 @@ export default function AppTabs({
   userCount,
   systemCount,
   search,
+  filter,
   onTabChange,
   onSearchChange,
+  onFilterChange,
   onRefresh,
   refreshing,
   refreshDisabled,
@@ -63,6 +67,42 @@ export default function AppTabs({
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="relative flex items-center">
+            <svg
+              viewBox="0 0 16 16"
+              aria-hidden
+              className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-zinc-500 dark:text-zinc-400"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M1.5 2.5h13L9.5 8.5v5l-3-1.5v-3.5l-5-6Z" />
+            </svg>
+            <select
+              value={filter}
+              onChange={(e) => onFilterChange(e.target.value as InstallFilter)}
+              aria-label="Lọc theo trạng thái cài đặt"
+              className="appearance-none rounded-lg border border-zinc-300 bg-white py-1.5 pl-8 pr-7 text-sm text-zinc-700 outline-none focus:border-red-600/60 dark:border-zinc-700 dark:bg-zinc-800/60 dark:text-zinc-300"
+            >
+              <option value="all">Tất cả</option>
+              <option value="installed">Đang cài đặt</option>
+              <option value="uninstalled">Đã gỡ</option>
+            </select>
+            <svg
+              viewBox="0 0 12 12"
+              aria-hidden
+              className="pointer-events-none absolute right-2.5 h-3 w-3 text-zinc-500 dark:text-zinc-400"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2.5 4.5 6 8l3.5-3.5" />
+            </svg>
+          </div>
           <button
             type="button"
             onClick={onRefresh}

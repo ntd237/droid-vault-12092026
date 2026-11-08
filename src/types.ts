@@ -41,3 +41,5 @@ export interface AppConfig {
   blacklist: string[];
   theme: string;
 }
+
+export type InstallFilter = "all" | "installed" | "uninstalled";
