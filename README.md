@@ -2,7 +2,7 @@
 
 > Quản lý ứng dụng Android qua ADB trên Windows: xem danh sách với icon và tên thật, phân loại User/System apps, gỡ cài đặt giữ dữ liệu và khôi phục an toàn.
 
-[![Version](https://img.shields.io/badge/version-0.2.7-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-0.2.8-blue.svg)](package.json)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-lightgrey.svg)](#yêu-cầu-hệ-thống)
 [![Tauri](https://img.shields.io/badge/tauri-v2-orange.svg)](https://tauri.app/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -104,6 +104,13 @@ Các bản đóng gói chính thức được phát hành tại [GitHub Releases
 - **Bản cài đặt NSIS**: `Droid Vault_<phiên bản>_x64-setup.exe` — bản duy nhất được phát hành, cài per-user (không cần quyền admin) và là bản updater sử dụng.
 
 Đã cài đặt từ bản phát hành trước? Ứng dụng sẽ **tự động cập nhật** khi mở — không cần tải bản cài mới thủ công.
+
+**Loại bỏ cảnh báo SmartScreen (tùy chọn)**: Installer được ký bằng chứng chỉ self-signed. Muốn Windows tin tưởng hoàn toàn, tải chứng chỉ công khai `droid-vault-codesign.cer` từ assets của [Release mới nhất](https://github.com/ntd237/droid-vault-12092026/releases/latest) về rồi import (PowerShell với quyền Administrator):
+```powershell
+certutil -addstore Root "droid-vault-codesign.cer"
+certutil -addstore TrustedPublisher "droid-vault-codesign.cer"
+```
+Sau khi import, lần cài tiếp theo sẽ hiển thị nhà phát hành đã được xác minh (CN=Droid Vault). Auto-update trong app **không** cần bước này.
 
 ### Build từ mã nguồn
 

@@ -58,3 +58,12 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: --target x86_64-pc-windows-msvc
+
+      # Publish the public code-signing certificate so end users can trust
+      # the installer (import into Trusted Root + Trusted Publishers).
+      - name: Upload code-signing certificate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = node -p "require('./package.json').version"
+          gh release upload "v$version" "certs/droid-vault-codesign.cer" --clobber
