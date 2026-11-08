@@ -4,7 +4,6 @@ import ActionBar from "./components/ActionBar";
 import AppList from "./components/AppList";
 import AppTabs from "./components/AppTabs";
 import ConfirmDialog from "./components/ConfirmDialog";
-import ProgressLog from "./components/ProgressLog";
 import StatusBar from "./components/StatusBar";
 import ThemeToggle from "./components/ThemeToggle";
 import UpdateToast from "./components/UpdateToast";
@@ -75,8 +74,6 @@ function App() {
     failure: number;
   } | null>(null);
   const [batchError, setBatchError] = useState<string | null>(null);
-  const [logDismissed, setLogDismissed] = useState(false);
-  const dismissLog = useCallback(() => setLogDismissed(true), []);
 
   // Auto-rescan trigger: bump an epoch each time the device (re)connects so a
   // failed first scan is retried on the next connection.
@@ -215,21 +212,22 @@ function App() {
           ? pkgs.filter((p) => apps?.some((a) => a.package === p && a.restorable))
           : pkgs;
       if (targets.length === 0) {
-        setConfirmMode(null);
+        // Keep the dialog open and surface the reason inside it — user apps
+        // cannot be restored via ADB.
         setBatchError(
-          "Không thể khôi phục: chỉ app hệ thống mới khôi phục được qua ADB. App người dùng (cài qua cửa hàng) khi gỡ sẽ không còn bản sao trên máy.",
+          "Không thể khôi phục: user app không khôi phục được qua ADB. Chỉ app hệ thống còn bản sao trên máy mới khôi phục được.",
         );
         return;
       }
 
-      setConfirmMode(null);
+      // The dialog stays open through the batch: it is the progress and
+      // result surface, so no banner under the header pushes the list around.
       setRunning(true);
       setBatchTotal(targets.length);
       setBatchProgress(null);
       setBatchResults([]);
       setBatchSummary(null);
       setBatchError(null);
-      setLogDismissed(false);
 
       const unlistenProgress = listenBatchProgress((p) => setBatchProgress(p));
       const unlistenResult = listenBatchResult((r) =>
@@ -267,6 +265,16 @@ function App() {
     [running, selected, apps],
   );
 
+  // Closing the dialog after a batch (or cancelling during confirm) resets
+  // all batch state so the next open starts clean.
+  const closeDialog = useCallback(() => {
+    setConfirmMode(null);
+    setBatchProgress(null);
+    setBatchResults([]);
+    setBatchSummary(null);
+    setBatchError(null);
+  }, []);
+
   const deviceLost = apps !== null && status !== "connected";
   const hasList = apps !== null || (loading && status === "connected");
 
@@ -284,21 +292,6 @@ function App() {
       </header>
 
       <main className="flex min-h-0 flex-1 flex-col p-4">
-        {(running || batchResults.length > 0 || batchSummary || batchError) && !logDismissed && (
-          <div className="mb-3">
-            <ProgressLog
-              running={running}
-              total={batchTotal}
-              progress={batchProgress}
-              results={batchResults}
-              labels={appLabels}
-              summary={batchSummary}
-              error={batchError}
-              onDismiss={dismissLog}
-            />
-          </div>
-        )}
-
         {!ready && !hasList && (
           <div className="flex flex-1 items-center justify-center">
             <p className="text-zinc-500 dark:text-zinc-400">Đang quét thiết bị…</p>
@@ -388,7 +381,14 @@ function App() {
         <ConfirmDialog
           mode={confirmMode}
           apps={selectedApps}
-          onCancel={() => setConfirmMode(null)}
+          total={batchTotal}
+          running={running}
+          progress={batchProgress}
+          results={batchResults}
+          summary={batchSummary}
+          error={batchError}
+          labels={appLabels}
+          onCancel={closeDialog}
           onConfirm={() => void runBatch(confirmMode)}
         />
       )}

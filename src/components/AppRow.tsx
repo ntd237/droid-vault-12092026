@@ -59,18 +59,6 @@ export default function AppRow({ app, selected, onToggle }: AppRowProps) {
             {app.package}
           </span>
         </span>
-
-        {!app.installed && (
-          <span
-            className={`shrink-0 rounded-md border px-2 py-0.5 text-xs ${
-              app.restorable
-                ? "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                : "border-zinc-300 bg-zinc-100 text-zinc-500 dark:border-zinc-600/60 dark:bg-zinc-700/30 dark:text-zinc-400"
-            }`}
-          >
-            {app.restorable ? "Đã gỡ (khôi phục được)" : "Đã gỡ"}
-          </span>
-        )}
       </button>
     </li>
   );
