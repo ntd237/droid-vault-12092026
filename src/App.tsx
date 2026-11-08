@@ -7,8 +7,10 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import ProgressLog from "./components/ProgressLog";
 import StatusBar from "./components/StatusBar";
 import ThemeToggle from "./components/ThemeToggle";
+import UpdateToast from "./components/UpdateToast";
 import { useDevicePolling } from "./hooks/useDevicePolling";
 import { useTheme } from "./hooks/useTheme";
+import { useUpdater } from "./hooks/useUpdater";
 import {
   getApps,
   listenAppResolved,
@@ -54,6 +56,7 @@ function Spinner({ className = "h-5 w-5" }: { className?: string }) {
 function App() {
   const { status, device, adbError, ready } = useDevicePolling();
   const { theme, toggleTheme } = useTheme();
+  const { status: updateStatus, progress: updateProgress } = useUpdater();
 
   const [apps, setApps] = useState<AppInfo[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -389,6 +392,8 @@ function App() {
           onConfirm={() => void runBatch(confirmMode)}
         />
       )}
+
+      <UpdateToast status={updateStatus} progress={updateProgress} />
     </div>
   );
 }

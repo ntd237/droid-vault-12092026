@@ -2,10 +2,10 @@
 
 > Quản lý ứng dụng Android qua ADB trên Windows: xem danh sách với icon và tên thật, phân loại User/System apps, gỡ cài đặt giữ dữ liệu và khôi phục an toàn.
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](package.json)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-lightgrey.svg)](#yêu-cầu-hệ-thống)
 [![Tauri](https://img.shields.io/badge/tauri-v2-orange.svg)](https://tauri.app/)
-[![License](https://img.shields.io/badge/license-Proprietary-red.svg)](#license)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ## Table of Contents
 
@@ -16,6 +16,7 @@
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [Known Limitations](#known-limitations)
+- [Release & Cập nhật tự động](#release--cập-nhật-tự-động)
 - [License](#license)
 - [Contact](#contact)
 
@@ -49,6 +50,9 @@ Nhiều công cụ ADB thông thường chỉ hiển thị danh sách package na
 - **Khôi phục dễ dàng**: Thực thi `cmd package install-existing <package>` cho các app hệ thống có badge **"Đã gỡ (khôi phục được)"**.
 - **Thao tác hàng loạt**: Chọn nhiều app, chọn tất cả theo tab, thực thi hàng loạt có thanh tiến trình và log chi tiết.
 - **Bảo vệ an toàn (Blacklist)**: Chặn gỡ các gói cốt lõi của hệ điều hành (Settings, SystemUI, Phone...).
+- **Giao diện sáng / tối**: Theme sáng là mặc định, có nút chuyển nhanh sáng ↔ tối trên thanh công cụ và lựa chọn được lưu lại giữa các phiên.
+- **Bố cục 1 / 2 cột responsive**: Danh sách ứng dụng tự chuyển sang 2 cột khi cửa sổ đủ rộng (`lg` breakpoint), giữ 1 cột trên cửa sổ hẹp.
+- **Tự động cập nhật (Auto-Update)**: Khi mở ứng dụng, Droid Vault tự kiểm tra GitHub Releases, tự tải về và cài đặt bản mới (có toast tiến trình nhỏ) rồi khởi động lại — không cần tải lại thủ công.
 
 ---
 
@@ -96,10 +100,11 @@ flowchart TD
   - [Rust](https://rustup.rs/) (MSVC toolchain) + Visual Studio C++ Build Tools.
 
 ### Tải bản dựng sẵn (Người dùng cuối)
-Các bản đóng gói phát hành nằm trong thư mục `src-tauri/target/release/bundle/`:
-- **Bản cài đặt NSIS**: `Droid Vault_0.1.0_x64-setup.exe` (Khuyến nghị, dung lượng ~2.5 MB).
-- **Bản cài đặt MSI**: `Droid Vault_0.1.0_x64_en-US.msi` (~3.5 MB).
-- **Bản Portable (Chạy ngay)**: `src-tauri/target/release/droid-vault.exe` (~7.3 MB).
+Các bản đóng gói chính thức được phát hành tại [GitHub Releases](https://github.com/ntd237/droid-vault-12092026/releases):
+- **Bản cài đặt NSIS**: `Droid Vault_<phiên bản>_x64-setup.exe` (Khuyến nghị).
+- **Bản cài đặt MSI**: `Droid Vault_<phiên bản>_x64_en-US.msi`.
+
+Đã cài đặt từ bản phát hành trước? Ứng dụng sẽ **tự động cập nhật** khi mở — không cần tải bản cài mới thủ công.
 
 ### Build từ mã nguồn
 
@@ -174,13 +179,13 @@ Tệp cấu hình lưu trữ tại `%APPDATA%\com.droidvault.app\config.json` (t
     "com.android.providers.telephony",
     "com.android.providers.contacts"
   ],
-  "theme": "dark"
+  "theme": "light"
 }
 ```
 
 - `adb_path`: Đường dẫn tùy chỉnh tới `adb.exe` (mặc định `null` để tự nhận diện).
 - `blacklist`: Danh sách các package name bị cấm gỡ nhằm ngăn chặn lỗi hệ thống.
-- `theme`: Giao diện ứng dụng (`dark`).
+- `theme`: Giao diện ứng dụng (`light` mặc định, `dark` qua nút chuyển).
 
 ---
 
@@ -192,9 +197,28 @@ Tệp cấu hình lưu trữ tại `%APPDATA%\com.droidvault.app\config.json` (t
 
 ---
 
+## Release & Cập nhật tự động
+
+### Quy trình phát hành
+1. Cập nhật `version` trong `package.json`, `src-tauri/tauri.conf.json` và `src-tauri/Cargo.toml` (chạy `cargo check` để đồng bộ `Cargo.lock`).
+2. Tạo và đẩy tag:
+   ```bash
+   git tag v0.2.0
+   git push origin v0.2.0
+   ```
+3. GitHub Actions (`.github/workflows/release.yml`) sẽ tự động build trên `windows-latest` (qua [tauri-apps/tauri-action](https://github.com/tauri-apps/tauri-action)), tạo bản NSIS + MSI, phát hành GitHub Release và publish `latest.json` cho updater.
+
+### Cập nhật tự động (Updater)
+- Endpoint kiểm tra: `https://github.com/ntd237/droid-vault-12092026/releases/latest/download/latest.json`.
+- Khi mở app, bản mới được tự tải và cài đặt ở chế độ passive (toast tiến trình nhỏ), sau đó app tự khởi động lại.
+
+> **Ghi chú quan trọng — Signing key**: Updater yêu cầu secrets `TAURI_SIGNING_PRIVATE_KEY` và `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (khóa Ed25519, public key đã cấu hình trong `tauri.conf.json`). Nếu làm mất private key, các bản cài hiện tại **không thể nhận bản update mới được ký** — bắt buộc người dùng phải cài lại thủ công. Hãy sao lưu an toàn khóa ký.
+
+---
+
 ## License
 
-Chưa gán license (Dự án phát triển nội bộ / cá nhân).
+Dự án được phát hành theo giấy phép **MIT** — xem toàn văn tại [LICENSE](LICENSE).
 
 ---
 
