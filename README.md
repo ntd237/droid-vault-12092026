@@ -2,7 +2,7 @@
 
 > Quản lý ứng dụng Android qua ADB trên Windows: xem danh sách với icon và tên thật, phân loại User/System apps, gỡ cài đặt giữ dữ liệu và khôi phục an toàn.
 
-[![Version](https://img.shields.io/badge/version-0.2.4-blue.svg)](package.json)
+[![Version](https://img.shields.io/badge/version-0.2.5-blue.svg)](package.json)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-lightgrey.svg)](#yêu-cầu-hệ-thống)
 [![Tauri](https://img.shields.io/badge/tauri-v2-orange.svg)](https://tauri.app/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -101,8 +101,7 @@ flowchart TD
 
 ### Tải bản dựng sẵn (Người dùng cuối)
 Các bản đóng gói chính thức được phát hành tại [GitHub Releases](https://github.com/ntd237/droid-vault-12092026/releases):
-- **Bản cài đặt NSIS**: `Droid Vault_<phiên bản>_x64-setup.exe` (Khuyến nghị).
-- **Bản cài đặt MSI**: `Droid Vault_<phiên bản>_x64_en-US.msi`.
+- **Bản cài đặt NSIS**: `Droid Vault_<phiên bản>_x64-setup.exe` — bản duy nhất được phát hành, cài per-user (không cần quyền admin) và là bản updater sử dụng.
 
 Đã cài đặt từ bản phát hành trước? Ứng dụng sẽ **tự động cập nhật** khi mở — không cần tải bản cài mới thủ công.
 
@@ -193,7 +192,13 @@ Tệp cấu hình lưu trữ tại `%APPDATA%\com.droidvault.app\config.json` (t
 
 - **Phụ thuộc ADB**: Ứng dụng yêu cầu máy tính phải có môi trường `adb.exe` khả dụng.
 - **Ứng dụng Overlay (RRO)**: Một số gói tài nguyên giao diện hệ thống thuần overlay không có launcher activity sẽ hiển thị theo tên package gốc.
-- **Cảnh báo SmartScreen**: Bản dựng chưa ký chứng chỉ số (Code Signing Certificate), do đó Windows Defender SmartScreen có thể hiển thị cảnh báo bảo vệ ở lần đầu khởi chạy (chọn *More info* -> *Run anyway*).
+- **Cảnh báo SmartScreen**: Bản dựng được ký bằng **chứng chỉ self-signed** (không phải CA thương mại), nên lần đầu tải installer từ trình duyệt Windows Defender SmartScreen có thể cảnh báo (chọn *More info* -> *Run anyway*). Muốn Windows tin tưởng hoàn toàn trên máy của bạn, hãy import chứng chỉ:
+  ```powershell
+  # Chạy PowerShell với quyền Administrator, file .cer lấy từ người phát hành
+  certutil -addstore Root "droid-vault-codesign.cer"
+  certutil -addstore TrustedPublisher "droid-vault-codesign.cer"
+  ```
+  Auto-update (tải qua updater trong app) **không** gặp SmartScreen và không cần UAC vì installer NSIS cài per-user.
 
 ---
 
@@ -206,11 +211,11 @@ Tệp cấu hình lưu trữ tại `%APPDATA%\com.droidvault.app\config.json` (t
    git tag v0.2.0
    git push origin v0.2.0
    ```
-3. GitHub Actions (`.github/workflows/release.yml`) sẽ tự động build trên `windows-latest` (qua [tauri-apps/tauri-action](https://github.com/tauri-apps/tauri-action)), tạo bản NSIS + MSI, phát hành GitHub Release và publish `latest.json` cho updater.
+3. GitHub Actions (`.github/workflows/release.yml`) sẽ tự động build trên `windows-latest` (qua [tauri-apps/tauri-action](https://github.com/tauri-apps/tauri-action)), tạo bản NSIS, **ký Authenticode** (import PFX từ secrets `WINDOWS_CERTIFICATE`/`WINDOWS_CERTIFICATE_PASSWORD`, thumbprint cấu hình trong `tauri.conf.json`), phát hành GitHub Release và publish `latest.json` cho updater.
 
 ### Cập nhật tự động (Updater)
 - Endpoint kiểm tra: `https://github.com/ntd237/droid-vault-12092026/releases/latest/download/latest.json`.
-- Khi mở app, bản mới được tự tải và cài đặt ở chế độ passive (toast tiến trình nhỏ), sau đó app tự khởi động lại.
+- Khi mở app, bản mới được tự tải và cài đặt ở chế độ passive (toast tiến trình nhỏ) qua installer NSIS per-user — **không hiện UAC** — sau đó app tự khởi động lại.
 
 > **Ghi chú quan trọng — Signing key**: Updater yêu cầu secrets `TAURI_SIGNING_PRIVATE_KEY` và `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (khóa Ed25519, public key đã cấu hình trong `tauri.conf.json`). Nếu làm mất private key, các bản cài hiện tại **không thể nhận bản update mới được ký** — bắt buộc người dùng phải cài lại thủ công. Hãy sao lưu an toàn khóa ký.
 
