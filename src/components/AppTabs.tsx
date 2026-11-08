@@ -45,7 +45,7 @@ export default function AppTabs({
                 key={key}
                 type="button"
                 onClick={() => onTabChange(key)}
-                className={`-mb-px border-b-2 px-4 py-3 text-sm font-medium tracking-wide transition-colors ${
+                className={`-mb-px border-b-2 px-4 pb-3 text-sm font-medium tracking-wide transition-colors ${
                   isActive
                     ? "border-red-600 text-red-600 dark:text-red-400"
                     : "border-transparent text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200"
