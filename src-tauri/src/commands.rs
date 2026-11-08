@@ -129,7 +129,9 @@ impl packages::HelperRunner for HelperAdapter {
         // H5: skip the push when the device already holds a dex of the same
         // byte size — an adb push costs a spawn + transfer on every scan.
         let mut dex_on_device = false;
-        if let Ok(out) = self.adb.run(&["-s", &self.serial, "shell", "ls", "-l", HELPER_DEVICE_PATH])
+        if let Ok(out) =
+            self.adb
+                .run(&["-s", &self.serial, "shell", "ls", "-l", HELPER_DEVICE_PATH])
         {
             dex_on_device = packages::parse_ls_sizes(&out)
                 .iter()
@@ -140,7 +142,13 @@ impl packages::HelperRunner for HelperAdapter {
             std::fs::write(&local, HELPER_DEX)
                 .map_err(|e| format!("Không ghi được helper tạm: {e}"))?;
             self.adb
-                .run(&["-s", &self.serial, "push", local.to_string_lossy().as_ref(), HELPER_DEVICE_PATH])
+                .run(&[
+                    "-s",
+                    &self.serial,
+                    "push",
+                    local.to_string_lossy().as_ref(),
+                    HELPER_DEVICE_PATH,
+                ])
                 .map_err(|e| format!("Không đẩy helper lên thiết bị: {e}"))?;
         }
 
@@ -194,14 +202,15 @@ impl packages::ApkLike for ApkAdapter {
 
 impl ApkAdapter {
     fn pull(&self, device_path: &str, local: &Path) -> Result<(), String> {
-        self.adb.run(&[
-            "-s",
-            &self.serial,
-            "pull",
-            device_path,
-            local.to_string_lossy().as_ref(),
-        ])
-        .map(|_| ())
+        self.adb
+            .run(&[
+                "-s",
+                &self.serial,
+                "pull",
+                device_path,
+                local.to_string_lossy().as_ref(),
+            ])
+            .map(|_| ())
     }
 
     /// Parse the pulled base APK; then decide whether density splits must be
@@ -325,10 +334,13 @@ impl CacheAdapter {
 impl packages::CacheLike for CacheAdapter {
     fn get_meta(&self, pkg: &str) -> Option<packages::CachedMeta> {
         let guard = self.0.lock().unwrap();
-        guard.load_meta().get(&cache::Cache::sanitize_key(pkg)).map(|m| packages::CachedMeta {
-            label: m.label.clone(),
-            version_code: m.version_code,
-        })
+        guard
+            .load_meta()
+            .get(&cache::Cache::sanitize_key(pkg))
+            .map(|m| packages::CachedMeta {
+                label: m.label.clone(),
+                version_code: m.version_code,
+            })
     }
 
     fn put_meta(&self, pkg: &str, meta: &packages::CachedMeta) {
@@ -345,7 +357,10 @@ impl packages::CacheLike for CacheAdapter {
             .map(|(pkg, meta)| {
                 (
                     pkg.clone(),
-                    cache::CachedMeta { label: meta.label.clone(), version_code: meta.version_code },
+                    cache::CachedMeta {
+                        label: meta.label.clone(),
+                        version_code: meta.version_code,
+                    },
                 )
             })
             .collect();
@@ -386,8 +401,7 @@ fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 
 fn load_config(app: &AppHandle) -> Result<config::AppConfig, String> {
     let dir = app_data_dir(app)?;
-    config::load_or_create(&dir)
-        .map_err(|e| format!("Không đọc/tạo được config.json: {e}"))
+    config::load_or_create(&dir).map_err(|e| format!("Không đọc/tạo được config.json: {e}"))
 }
 
 fn resolve_adb(cfg: &config::AppConfig) -> adb::Adb {
@@ -423,7 +437,9 @@ fn get_or_init_adb(app: &AppHandle) -> Result<std::sync::Arc<adb::Adb>, String> 
 fn first_device_serial(app: &AppHandle) -> Result<(String, config::AppConfig), String> {
     let cfg = load_config(app)?;
     let adb = get_or_init_adb(app)?;
-    let out = adb.run(&["devices"]).map_err(|e| format!("Không chạy được adb: {e}"))?;
+    let out = adb
+        .run(&["devices"])
+        .map_err(|e| format!("Không chạy được adb: {e}"))?;
     adb::parse_devices(&out)
         .into_iter()
         .find(|d| d.state == adb::DeviceState::Device)
@@ -464,7 +480,11 @@ pub fn list_devices(app: AppHandle) -> Result<Vec<DeviceDto>, String> {
                 adb::DeviceState::Device => device_model(&adb, &d.serial),
                 _ => None,
             };
-            DeviceDto { serial: d.serial, state: state_str(d.state), model }
+            DeviceDto {
+                serial: d.serial,
+                state: state_str(d.state),
+                model,
+            }
         })
         .collect())
 }
@@ -484,13 +504,19 @@ pub async fn get_apps(app: AppHandle) -> Result<Vec<packages::AppInfo>, String> 
             .map_err(|e| format!("Không tạo được thư mục cache icon: {e}"))?,
     );
 
-    let device_adb = DeviceAdb { adb: adb.clone(), serial: Some(serial.clone()) };
+    let device_adb = DeviceAdb {
+        adb: adb.clone(),
+        serial: Some(serial.clone()),
+    };
     let fast_adb = adb.clone();
     let fast_serial = serial.clone();
     let listing_cache = cache.clone();
     let listing = tauri::async_runtime::spawn_blocking(move || {
         use packages::AdbLike;
-        let apk_adapter = ApkAdapter { adb: fast_adb, serial: fast_serial };
+        let apk_adapter = ApkAdapter {
+            adb: fast_adb,
+            serial: fast_serial,
+        };
         // H4: one adb spawn for all 5 package listings; on any structural
         // surprise (missing markers) fall back to the 5-call sequential path.
         let batched = device_adb
@@ -498,11 +524,15 @@ pub async fn get_apps(app: AppHandle) -> Result<Vec<packages::AppInfo>, String> 
             .ok()
             .and_then(|out| packages::parse_batched_package_lists(&out));
         match batched {
-            Some((user, system, user_all, system_all, versions)) => {
-                packages::listing_from_parsed(
-                    &device_adb, &listing_cache, user, system, user_all, system_all, versions,
-                )
-            }
+            Some((user, system, user_all, system_all, versions)) => packages::listing_from_parsed(
+                &device_adb,
+                &listing_cache,
+                user,
+                system,
+                user_all,
+                system_all,
+                versions,
+            ),
             None => packages::list_apps_fast(&device_adb, &apk_adapter, &listing_cache),
         }
     })
@@ -517,15 +547,17 @@ pub async fn get_apps(app: AppHandle) -> Result<Vec<packages::AppInfo>, String> 
     let gen = state.scan_gen.fetch_add(1, Ordering::Relaxed) + 1;
     drop(state);
 
-    let hydration_adb = DeviceAdb { adb: adb.clone(), serial: Some(serial.clone()) };
+    let hydration_adb = DeviceAdb {
+        adb: adb.clone(),
+        serial: Some(serial.clone()),
+    };
     let hydrate_app = app.clone();
     let adb_path = adb.path.clone();
     tauri::async_runtime::spawn_blocking(move || {
         use packages::AdbLike;
 
-        let current_gen = |app: &AppHandle| {
-            app.state::<AppState>().scan_gen.load(Ordering::Relaxed)
-        };
+        let current_gen =
+            |app: &AppHandle| app.state::<AppState>().scan_gen.load(Ordering::Relaxed);
         let paths = hydration_adb
             .run(&["shell", "pm", "list", "packages", "-f"])
             .map(|out| packages::parse_package_paths(&out))
@@ -546,10 +578,14 @@ pub async fn get_apps(app: AppHandle) -> Result<Vec<packages::AppInfo>, String> 
             move || {
                 let adb = std::sync::Arc::new(adb::Adb::new(adb_path.clone()));
                 (
-                    Box::new(DeviceAdb { adb: adb.clone(), serial: Some(serial.clone()) })
-                        as Box<dyn AdbLike + Send>,
-                    Box::new(ApkAdapter { adb, serial: serial.clone() })
-                        as Box<dyn packages::ApkLike + Send>,
+                    Box::new(DeviceAdb {
+                        adb: adb.clone(),
+                        serial: Some(serial.clone()),
+                    }) as Box<dyn AdbLike + Send>,
+                    Box::new(ApkAdapter {
+                        adb,
+                        serial: serial.clone(),
+                    }) as Box<dyn packages::ApkLike + Send>,
                 )
             }
         };
@@ -577,15 +613,15 @@ pub async fn get_apps(app: AppHandle) -> Result<Vec<packages::AppInfo>, String> 
             });
 
             let helper_cache = cache.clone();
-            let helper = HelperAdapter { adb: adb.clone(), serial: serial.clone() };
+            let helper = HelperAdapter {
+                adb: adb.clone(),
+                serial: serial.clone(),
+            };
             let helper_emit = hydrate_app.clone();
             let helper_thread = scope.spawn(move || {
-                packages::resolve_via_helper(
-                    &helper_cache,
-                    &helper_set,
-                    &helper,
-                    &mut |info| emit_resolved(&helper_emit, info),
-                )
+                packages::resolve_via_helper(&helper_cache, &helper_set, &helper, &mut |info| {
+                    emit_resolved(&helper_emit, info)
+                })
             });
 
             if let Ok(leftover) = helper_thread.join() {
@@ -603,10 +639,14 @@ pub async fn get_apps(app: AppHandle) -> Result<Vec<packages::AppInfo>, String> 
                 move || {
                     let adb = std::sync::Arc::new(adb::Adb::new(adb_path.clone()));
                     (
-                        Box::new(DeviceAdb { adb: adb.clone(), serial: Some(serial.clone()) })
-                            as Box<dyn AdbLike + Send>,
-                        Box::new(ApkAdapter { adb, serial: serial.clone() })
-                            as Box<dyn packages::ApkLike + Send>,
+                        Box::new(DeviceAdb {
+                            adb: adb.clone(),
+                            serial: Some(serial.clone()),
+                        }) as Box<dyn AdbLike + Send>,
+                        Box::new(ApkAdapter {
+                            adb,
+                            serial: serial.clone(),
+                        }) as Box<dyn packages::ApkLike + Send>,
                     )
                 }
             };
@@ -679,7 +719,10 @@ async fn run_batch_cmd(
     let _lease = BusyLease(&state.busy);
 
     let (serial, cfg) = first_device_serial(&app)?;
-    let device_adb = DeviceAdb { adb: get_or_init_adb(&app)?, serial: Some(serial) };
+    let device_adb = DeviceAdb {
+        adb: get_or_init_adb(&app)?,
+        serial: Some(serial),
+    };
     let blacklist = cfg.blacklist;
     let emit_app = app.clone();
 
@@ -789,7 +832,10 @@ mod tests {
             64,
         )
         .expect("svg renders");
-        assert!(should_try_splits(&Some(solid)), "weak icon must trigger split pull");
+        assert!(
+            should_try_splits(&Some(solid)),
+            "weak icon must trigger split pull"
+        );
 
         // Content-rich icon: healthy -> no split pull.
         let rich = crate::vector::render_svg(
@@ -801,6 +847,9 @@ mod tests {
             64,
         )
         .expect("svg renders");
-        assert!(!should_try_splits(&Some(rich)), "healthy icon must not trigger split pull");
+        assert!(
+            !should_try_splits(&Some(rich)),
+            "healthy icon must not trigger split pull"
+        );
     }
 }

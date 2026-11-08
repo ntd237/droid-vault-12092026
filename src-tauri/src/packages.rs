@@ -70,7 +70,11 @@ pub struct AppInfo {
 /// packages uninstalled for user 0) minus the matching installed-only list.
 pub fn restorable_set(all_with_u: &[String], installed: &[String]) -> HashSet<String> {
     let installed: HashSet<&String> = installed.iter().collect();
-    all_with_u.iter().filter(|p| !installed.contains(p)).cloned().collect()
+    all_with_u
+        .iter()
+        .filter(|p| !installed.contains(p))
+        .cloned()
+        .collect()
 }
 
 /// Parse `pm list packages` output (adb.rs convention): lines "package:<name>".
@@ -193,8 +197,12 @@ pub fn parse_package_paths(output: &str) -> HashMap<String, String> {
     let mut map = HashMap::new();
     for line in output.lines() {
         let line = line.trim();
-        let Some(rest) = line.strip_prefix("package:") else { continue };
-        let Some((path, pkg)) = rest.rsplit_once('=') else { continue };
+        let Some(rest) = line.strip_prefix("package:") else {
+            continue;
+        };
+        let Some((path, pkg)) = rest.rsplit_once('=') else {
+            continue;
+        };
         if path.is_empty() || pkg.is_empty() || !path.ends_with(".apk") {
             continue;
         }
@@ -229,7 +237,9 @@ pub fn parse_ls_sizes(output: &str) -> Vec<(u64, String)> {
         if fields.len() < 8 {
             continue;
         }
-        let Ok(size) = fields[4].parse::<u64>() else { continue };
+        let Ok(size) = fields[4].parse::<u64>() else {
+            continue;
+        };
         sizes.push((size, fields[7..].join(" ")));
     }
     sizes
@@ -254,10 +264,12 @@ pub fn list_apps_fast(adb: &dyn AdbLike, apk: &dyn ApkLike, cache: &dyn CacheLik
     // Installed-only lists (source of truth for installed=true), pinned to
     // user 0.
     let user = parse_package_list(
-        &adb.run(&["shell", "pm", "list", "packages", "-3", "--user", "0"]).unwrap_or_default(),
+        &adb.run(&["shell", "pm", "list", "packages", "-3", "--user", "0"])
+            .unwrap_or_default(),
     );
     let system = parse_package_list(
-        &adb.run(&["shell", "pm", "list", "packages", "-s", "--user", "0"]).unwrap_or_default(),
+        &adb.run(&["shell", "pm", "list", "packages", "-s", "--user", "0"])
+            .unwrap_or_default(),
     );
     // The `-u` variants additionally enumerate packages uninstalled for
     // user 0. If a ROM rejects `-u` (run error), fall back to the installed
@@ -272,8 +284,7 @@ pub fn list_apps_fast(adb: &dyn AdbLike, apk: &dyn ApkLike, cache: &dyn CacheLik
         .unwrap_or_else(|_| system.clone());
 
     let version_map = parse_package_versions(
-        &adb
-            .run(&["shell", "pm", "list", "packages", "--show-versioncode"])
+        &adb.run(&["shell", "pm", "list", "packages", "--show-versioncode"])
             .unwrap_or_default(),
     );
 
@@ -307,7 +318,10 @@ pub fn listing_from_parsed(
     system_all: Vec<String>,
     version_map: HashMap<String, u64>,
 ) -> Listing {
-    let mut listing = Listing { apps: Vec::new(), pending: Vec::new() };
+    let mut listing = Listing {
+        apps: Vec::new(),
+        pending: Vec::new(),
+    };
 
     let restorable_user = restorable_set(&user_all, &user);
     let restorable_system: Vec<String> = restorable_set(&system_all, &system)
@@ -319,8 +333,16 @@ pub fn listing_from_parsed(
         .iter()
         .map(|p| (p.clone(), AppKind::User, true))
         .chain(system.iter().map(|p| (p.clone(), AppKind::System, true)))
-        .chain(restorable_user.iter().map(|p| (p.clone(), AppKind::User, false)))
-        .chain(restorable_system.iter().map(|p| (p.clone(), AppKind::System, false)))
+        .chain(
+            restorable_user
+                .iter()
+                .map(|p| (p.clone(), AppKind::User, false)),
+        )
+        .chain(
+            restorable_system
+                .iter()
+                .map(|p| (p.clone(), AppKind::System, false)),
+        )
         .collect();
 
     // Fallback for pre-Android-12 devices: probe dumpsys only for packages
@@ -397,7 +419,14 @@ pub fn resolve_pending(
         }
         let mapped = paths.get(pkg);
         let info = resolve_miss(
-            adb, apk, cache, pkg, degraded.kind, degraded.installed, degraded.version_code, mapped,
+            adb,
+            apk,
+            cache,
+            pkg,
+            degraded.kind,
+            degraded.installed,
+            degraded.version_code,
+            mapped,
         );
         on_resolved(info);
     }
@@ -418,7 +447,9 @@ fn cached_app_info(
     if device_version.map_or(false, |v| v != meta.version_code) {
         return None;
     }
-    let icon_base64 = cache.get_icon(pkg, meta.version_code).map(|bytes| base64_encode(&bytes));
+    let icon_base64 = cache
+        .get_icon(pkg, meta.version_code)
+        .map(|bytes| base64_encode(&bytes));
     Some(AppInfo {
         package: pkg.to_string(),
         label: meta.label,
@@ -494,8 +525,17 @@ fn compute_miss(
             // B1: a parse that yields no static label (system
             // APKs) degrades to the package name — and still
             // caches — so the entry is not re-pulled forever.
-            let label = if label.is_empty() { degraded.package.clone() } else { label };
-            MissOutcome { label, icon_png: icon, version_code: version, negative: false }
+            let label = if label.is_empty() {
+                degraded.package.clone()
+            } else {
+                label
+            };
+            MissOutcome {
+                label,
+                icon_png: icon,
+                version_code: version,
+                negative: false,
+            }
         }
         Err(()) => MissOutcome {
             label: degraded.package.clone(),
@@ -520,7 +560,10 @@ struct MetaBatch<'a> {
 
 impl<'a> MetaBatch<'a> {
     fn new(cache: &'a dyn CacheLike) -> Self {
-        MetaBatch { cache, metas: Vec::new() }
+        MetaBatch {
+            cache,
+            metas: Vec::new(),
+        }
     }
 
     fn put(&mut self, pkg: &str, meta: CachedMeta) {
@@ -564,7 +607,13 @@ fn commit_miss(
         // stored — hidden (uninstalled) packages are absent from the version
         // list and must stay re-resolvable.
         if let Some(v) = degraded.version_code {
-            batch.put(pkg, CachedMeta { label: pkg.to_string(), version_code: v });
+            batch.put(
+                pkg,
+                CachedMeta {
+                    label: pkg.to_string(),
+                    version_code: v,
+                },
+            );
         }
         return AppInfo {
             package: degraded.package.clone(),
@@ -578,7 +627,13 @@ fn commit_miss(
     }
     if let Some(v) = outcome.version_code {
         // Meta (and icon) only cached when the version is known.
-        batch.put(pkg, CachedMeta { label: outcome.label.clone(), version_code: v });
+        batch.put(
+            pkg,
+            CachedMeta {
+                label: outcome.label.clone(),
+                version_code: v,
+            },
+        );
         if let Some(bytes) = &outcome.icon_png {
             cache.put_icon(pkg, v, bytes);
         }
@@ -651,9 +706,16 @@ pub fn resolve_pending_parallel(
 pub fn list_apps(adb: &dyn AdbLike, apk: &dyn ApkLike, cache: &dyn CacheLike) -> Vec<AppInfo> {
     let mut listing = list_apps_fast(adb, apk, cache);
     let mut resolved: Vec<AppInfo> = Vec::new();
-    resolve_pending(adb, apk, cache, &listing.pending, &HashMap::new(), &mut |info| {
-        resolved.push(info);
-    });
+    resolve_pending(
+        adb,
+        apk,
+        cache,
+        &listing.pending,
+        &HashMap::new(),
+        &mut |info| {
+            resolved.push(info);
+        },
+    );
     for info in resolved {
         if let Some(slot) = listing.apps.iter_mut().find(|a| a.package == info.package) {
             *slot = info;
@@ -708,16 +770,26 @@ pub fn run_batch(
             });
             continue;
         }
-        on_progress(BatchProgress { index, total: pkgs.len(), package: pkg.clone() });
+        on_progress(BatchProgress {
+            index,
+            total: pkgs.len(),
+            package: pkg.clone(),
+        });
         let args: Vec<&str> = match op {
             BatchOp::Uninstall => vec!["shell", "pm", "uninstall", "-k", "--user", "0", pkg],
             BatchOp::Restore => vec!["shell", "cmd", "package", "install-existing", pkg],
         };
         let result = match adb.run(&args) {
-            Ok(stdout) => {
-                BatchResult { package: pkg.clone(), success: true, message: stdout.trim().to_string() }
-            }
-            Err(e) => BatchResult { package: pkg.clone(), success: false, message: e },
+            Ok(stdout) => BatchResult {
+                package: pkg.clone(),
+                success: true,
+                message: stdout.trim().to_string(),
+            },
+            Err(e) => BatchResult {
+                package: pkg.clone(),
+                success: false,
+                message: e,
+            },
         };
         results.push(result);
     }
@@ -735,8 +807,16 @@ fn base64_encode(data: &[u8]) -> String {
         let n = (b1 << 16) | (b2 << 8) | b3;
         out.push(TABLE[(n >> 18) as usize & 63] as char);
         out.push(TABLE[(n >> 12) as usize & 63] as char);
-        out.push(if chunk.len() > 1 { TABLE[(n >> 6) as usize & 63] as char } else { '=' });
-        out.push(if chunk.len() > 2 { TABLE[n as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 1 {
+            TABLE[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            TABLE[n as usize & 63] as char
+        } else {
+            '='
+        });
     }
     out
 }
@@ -781,17 +861,22 @@ fn base64_decode(s: &str) -> Option<Vec<u8>> {
 /// One line of DvHelper stdout.
 #[derive(Debug, Clone, PartialEq)]
 pub enum HelperOutcome {
-    Ok { package: String, label: String, icon_png: Option<Vec<u8>> },
-    Err { package: String },
+    Ok {
+        package: String,
+        label: String,
+        icon_png: Option<Vec<u8>>,
+    },
+    Err {
+        package: String,
+    },
 }
 
 /// Parse one `OK\t<pkg>\t<label_b64>\t<icon_b64 | ->` / `ERR\t<pkg>\t<reason_b64>`
 /// line. `None` for anything malformed (skipped by the caller).
 pub fn parse_helper_line(line: &str) -> Option<HelperOutcome> {
     let parts: Vec<&str> = line.split('\t').collect();
-    let decoded = |s: &str| -> Option<String> {
-        base64_decode(s).and_then(|b| String::from_utf8(b).ok())
-    };
+    let decoded =
+        |s: &str| -> Option<String> { base64_decode(s).and_then(|b| String::from_utf8(b).ok()) };
     match parts.first().copied()? {
         "OK" if parts.len() == 4 => {
             let package = parts[1].to_string();
@@ -800,10 +885,18 @@ pub fn parse_helper_line(line: &str) -> Option<HelperOutcome> {
             }
             let label = decoded(parts[2])?;
             if parts[3] == "-" {
-                Some(HelperOutcome::Ok { package, label, icon_png: None })
+                Some(HelperOutcome::Ok {
+                    package,
+                    label,
+                    icon_png: None,
+                })
             } else {
                 let icon_png = base64_decode(parts[3])?;
-                Some(HelperOutcome::Ok { package, label, icon_png: Some(icon_png) })
+                Some(HelperOutcome::Ok {
+                    package,
+                    label,
+                    icon_png: Some(icon_png),
+                })
             }
         }
         "ERR" if parts.len() == 3 => {
@@ -842,7 +935,11 @@ pub fn resolve_via_helper(
     let mut resolved: HashMap<String, AppInfo> = HashMap::new();
     let mut batch = MetaBatch::new(cache);
     let result = runner.query(&pkgs, &mut |line| {
-        let Some(HelperOutcome::Ok { package, label, icon_png }) = parse_helper_line(line)
+        let Some(HelperOutcome::Ok {
+            package,
+            label,
+            icon_png,
+        }) = parse_helper_line(line)
         else {
             return; // ERR lines / malformed lines stay leftover by absence
         };
@@ -851,7 +948,13 @@ pub fn resolve_via_helper(
         };
         let version_code = degraded.version_code;
         if let Some(v) = version_code {
-            batch.put(&package, CachedMeta { label: label.clone(), version_code: v });
+            batch.put(
+                &package,
+                CachedMeta {
+                    label: label.clone(),
+                    version_code: v,
+                },
+            );
             if let Some(bytes) = &icon_png {
                 cache.put_icon(&package, v, bytes);
             }
@@ -882,7 +985,6 @@ pub fn resolve_via_helper(
         Err(_) => pending.to_vec(),
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -928,8 +1030,10 @@ mod tests {
 
     impl MockAdb {
         fn batch_out(mut self, pkg: &str, res: Result<&str, &str>) -> Self {
-            self.batch_out
-                .insert(pkg.to_string(), res.map(|s| s.to_string()).map_err(|e| e.to_string()));
+            self.batch_out.insert(
+                pkg.to_string(),
+                res.map(|s| s.to_string()).map_err(|e| e.to_string()),
+            );
             self
         }
 
@@ -950,7 +1054,9 @@ mod tests {
 
     impl AdbLike for MockAdb {
         fn run(&self, args: &[&str]) -> Result<String, String> {
-            self.calls.borrow_mut().push(args.iter().map(|s| s.to_string()).collect());
+            self.calls
+                .borrow_mut()
+                .push(args.iter().map(|s| s.to_string()).collect());
             if args.len() >= 5 && args[1] == "pm" && args[2] == "list" && args[3] == "packages" {
                 if args[4] == "-u" {
                     if self.fail_u {
@@ -997,15 +1103,23 @@ mod tests {
 
     impl Default for MockApk {
         fn default() -> Self {
-            MockApk { calls: RefCell::new(Vec::new()), results: HashMap::new() }
+            MockApk {
+                calls: RefCell::new(Vec::new()),
+                results: HashMap::new(),
+            }
         }
     }
 
     impl MockApk {
-        fn result(mut self, path: &str, res: Result<(&str, Option<Vec<u8>>, Option<u64>), &str>) -> Self {
+        fn result(
+            mut self,
+            path: &str,
+            res: Result<(&str, Option<Vec<u8>>, Option<u64>), &str>,
+        ) -> Self {
             self.results.insert(
                 path.to_string(),
-                res.map(|(l, i, v)| (l.to_string(), i, v)).map_err(|e| e.to_string()),
+                res.map(|(l, i, v)| (l.to_string(), i, v))
+                    .map_err(|e| e.to_string()),
             );
             self
         }
@@ -1042,14 +1156,20 @@ mod tests {
 
     impl MockCache {
         fn with_meta(self, pkg: &str, label: &str, version_code: u64) -> Self {
-            self.meta
-                .borrow_mut()
-                .insert(pkg.to_string(), CachedMeta { label: label.to_string(), version_code });
+            self.meta.borrow_mut().insert(
+                pkg.to_string(),
+                CachedMeta {
+                    label: label.to_string(),
+                    version_code,
+                },
+            );
             self
         }
 
         fn with_icon(self, pkg: &str, version_code: u64, bytes: Vec<u8>) -> Self {
-            self.icons.borrow_mut().insert((pkg.to_string(), version_code), bytes);
+            self.icons
+                .borrow_mut()
+                .insert((pkg.to_string(), version_code), bytes);
             self
         }
 
@@ -1058,7 +1178,10 @@ mod tests {
         }
 
         fn icon_of(&self, pkg: &str, version_code: u64) -> Option<Vec<u8>> {
-            self.icons.borrow().get(&(pkg.to_string(), version_code)).cloned()
+            self.icons
+                .borrow()
+                .get(&(pkg.to_string(), version_code))
+                .cloned()
         }
     }
 
@@ -1072,16 +1195,23 @@ mod tests {
         }
 
         fn get_icon(&self, pkg: &str, version_code: u64) -> Option<Vec<u8>> {
-            self.icons.borrow().get(&(pkg.to_string(), version_code)).cloned()
+            self.icons
+                .borrow()
+                .get(&(pkg.to_string(), version_code))
+                .cloned()
         }
 
         fn put_icon(&self, pkg: &str, version_code: u64, bytes: &[u8]) {
-            self.icons.borrow_mut().insert((pkg.to_string(), version_code), bytes.to_vec());
+            self.icons
+                .borrow_mut()
+                .insert((pkg.to_string(), version_code), bytes.to_vec());
         }
     }
 
     fn find<'a>(apps: &'a [AppInfo], pkg: &str) -> &'a AppInfo {
-        apps.iter().find(|a| a.package == pkg).unwrap_or_else(|| panic!("missing app {pkg}"))
+        apps.iter()
+            .find(|a| a.package == pkg)
+            .unwrap_or_else(|| panic!("missing app {pkg}"))
     }
 
     fn degraded(pkg: &str, kind: AppKind, installed: bool, version: Option<u64>) -> AppInfo {
@@ -1109,7 +1239,10 @@ mod tests {
         }
 
         fn failing() -> Self {
-            MockRunner { lines: Vec::new(), fail: true }
+            MockRunner {
+                lines: Vec::new(),
+                fail: true,
+            }
         }
     }
 
@@ -1194,8 +1327,14 @@ mod tests {
                 "/data/app/~~x==/com.user.one-1/base.apk",
                 Ok(("User One", Some(vec![1, 2, 3]), Some(15))),
             )
-            .result("/data/app/com.user.two/base.apk", Ok(("User Two", None, None)))
-            .result("/system/app/SysApp/SysApp.apk", Ok(("Sys App", None, Some(7))))
+            .result(
+                "/data/app/com.user.two/base.apk",
+                Ok(("User Two", None, None)),
+            )
+            .result(
+                "/system/app/SysApp/SysApp.apk",
+                Ok(("Sys App", None, Some(7))),
+            )
             .result("/data/app/com.gone.app/base.apk", Err("corrupt apk"));
         (adb, apk, MockCache::default())
     }
@@ -1232,9 +1371,19 @@ mod tests {
         assert_eq!(sys.version_code, Some(7));
 
         let gone = find(&apps, "com.gone.app");
-        assert_eq!(gone.kind, AppKind::User, "uninstalled user package keeps the User kind");
-        assert_eq!(gone.installed, false, "restorable package must be marked not installed");
-        assert_eq!(gone.label, "com.gone.app", "parse error degrades label to package name");
+        assert_eq!(
+            gone.kind,
+            AppKind::User,
+            "uninstalled user package keeps the User kind"
+        );
+        assert_eq!(
+            gone.installed, false,
+            "restorable package must be marked not installed"
+        );
+        assert_eq!(
+            gone.label, "com.gone.app",
+            "parse error degrades label to package name"
+        );
         assert_eq!(gone.icon_base64, None);
     }
 
@@ -1252,10 +1401,19 @@ mod tests {
         assert!(apk_calls.contains(&"/data/app/~~x==/com.user.one-1/base.apk".to_string()));
         assert_eq!(
             cache.meta_of("com.user.one"),
-            Some(CachedMeta { label: "User One".to_string(), version_code: 15 })
+            Some(CachedMeta {
+                label: "User One".to_string(),
+                version_code: 15
+            })
         );
         assert_eq!(cache.icon_of("com.user.one", 15), Some(vec![1, 2, 3]));
-        assert_eq!(cache.meta_of("com.sys.app"), Some(CachedMeta { label: "Sys App".to_string(), version_code: 7 }));
+        assert_eq!(
+            cache.meta_of("com.sys.app"),
+            Some(CachedMeta {
+                label: "Sys App".to_string(),
+                version_code: 7
+            })
+        );
 
         // version unknown → meta NOT stored
         assert_eq!(cache.meta_of("com.user.two"), None);
@@ -1279,14 +1437,18 @@ mod tests {
         assert_eq!(one.icon_base64.as_deref(), Some("CQkJ"));
 
         let calls = adb.calls_snapshot();
-        let pm_path_calls: Vec<&Vec<String>> =
-            calls.iter().filter(|c| c.len() == 4 && c[2] == "path").collect();
+        let pm_path_calls: Vec<&Vec<String>> = calls
+            .iter()
+            .filter(|c| c.len() == 4 && c[2] == "path")
+            .collect();
         assert!(
             !pm_path_calls.iter().any(|c| c[3] == "com.user.one"),
             "cache hit must NOT call `pm path` for the cached package"
         );
         assert!(
-            !apk.calls_snapshot().iter().any(|p| p.contains("com.user.one")),
+            !apk.calls_snapshot()
+                .iter()
+                .any(|p| p.contains("com.user.one")),
             "cache hit must NOT parse the apk for the cached package"
         );
     }
@@ -1302,7 +1464,10 @@ mod tests {
         // Assert: all 4 packages listed despite the parse error.
         assert_eq!(apps.len(), 4);
         assert_eq!(find(&apps, "com.gone.app").label, "com.gone.app");
-        assert!(apk.calls_snapshot().len() == 4, "every pm-path hit is attempted via apk.parse");
+        assert!(
+            apk.calls_snapshot().len() == 4,
+            "every pm-path hit is attempted via apk.parse"
+        );
     }
 
     /// B1 (latency): a parse that succeeds with an EMPTY label (system APKs
@@ -1313,19 +1478,25 @@ mod tests {
     fn test_list_apps_empty_label_degrades_to_package_name_and_still_caches() {
         // Arrange: com.user.two parses OK but with an empty label.
         let (adb, _apk_unused, cache) = listing_fixture();
-        let apk = MockApk::default()
-            .result("/data/app/com.user.two/base.apk", Ok(("", None, Some(5))));
+        let apk =
+            MockApk::default().result("/data/app/com.user.two/base.apk", Ok(("", None, Some(5))));
 
         // Act
         let apps = list_apps(&adb, &apk, &cache);
 
         // Assert
         let two = find(&apps, "com.user.two");
-        assert_eq!(two.label, "com.user.two", "empty label must degrade to package name");
+        assert_eq!(
+            two.label, "com.user.two",
+            "empty label must degrade to package name"
+        );
         assert_eq!(two.version_code, Some(5));
         assert_eq!(
             cache.meta_of("com.user.two"),
-            Some(CachedMeta { label: "com.user.two".to_string(), version_code: 5 }),
+            Some(CachedMeta {
+                label: "com.user.two".to_string(),
+                version_code: 5
+            }),
             "meta must be cached so the package is not re-pulled every refresh"
         );
     }
@@ -1341,8 +1512,10 @@ mod tests {
         // never be pulled/parsed.
         let (adb, _apk_unused, cache) = listing_fixture();
         let adb = adb.with_versioncode("package:com.gone.app versionCode:3\n");
-        let apk = MockApk::default()
-            .result("/data/app/com.gone.app/base.apk", Err("pull failed: permission denied"));
+        let apk = MockApk::default().result(
+            "/data/app/com.gone.app/base.apk",
+            Err("pull failed: permission denied"),
+        );
 
         // Act
         let apps = list_apps(&adb, &apk, &cache);
@@ -1352,7 +1525,10 @@ mod tests {
         assert_eq!(gone.label, "com.gone.app");
         assert_eq!(
             cache.meta_of("com.gone.app"),
-            Some(CachedMeta { label: "com.gone.app".to_string(), version_code: 3 }),
+            Some(CachedMeta {
+                label: "com.gone.app".to_string(),
+                version_code: 3
+            }),
             "deterministic parse failure must be negative-cached with the device version"
         );
     }
@@ -1364,8 +1540,10 @@ mod tests {
     fn test_list_apps_unresolvable_apk_not_cached_without_device_version() {
         // Arrange: empty --show-versioncode output → device version unknown.
         let (adb, _apk_unused, cache) = listing_fixture();
-        let apk = MockApk::default()
-            .result("/data/app/com.gone.app/base.apk", Err("pull failed: permission denied"));
+        let apk = MockApk::default().result(
+            "/data/app/com.gone.app/base.apk",
+            Err("pull failed: permission denied"),
+        );
 
         // Act
         let _ = list_apps(&adb, &apk, &cache);
@@ -1392,7 +1570,10 @@ mod tests {
         assert_eq!(map.len(), 2);
         assert_eq!(map.get("com.a"), Some(&10));
         assert_eq!(map.get("com.c"), Some(&42));
-        assert!(!map.contains_key("com.b"), "lines without versionCode are skipped");
+        assert!(
+            !map.contains_key("com.b"),
+            "lines without versionCode are skipped"
+        );
     }
 
     #[test]
@@ -1406,7 +1587,8 @@ mod tests {
     #[test]
     fn test_parse_dumpsys_version_code_extracts_first_versioncode() {
         // Arrange: real dumpsys shape, versionCode may carry suffixes.
-        let out = "Packages:\n  Package [com.a] (abc):\n    versionCode=1234 minSdk=21 targetSdk=33\n";
+        let out =
+            "Packages:\n  Package [com.a] (abc):\n    versionCode=1234 minSdk=21 targetSdk=33\n";
 
         // Act/Assert
         assert_eq!(parse_dumpsys_version_code(out), Some(1234));
@@ -1415,7 +1597,10 @@ mod tests {
     #[test]
     fn test_parse_dumpsys_version_code_missing_returns_none() {
         // Arrange/Act/Assert
-        assert_eq!(parse_dumpsys_version_code("Packages:\n  Package [com.a] (abc):\n"), None);
+        assert_eq!(
+            parse_dumpsys_version_code("Packages:\n  Package [com.a] (abc):\n"),
+            None
+        );
         assert_eq!(parse_dumpsys_version_code(""), None);
     }
 
@@ -1435,11 +1620,18 @@ mod tests {
         let one = find(&apps, "com.user.one");
         assert_eq!(one.label, "User One");
         assert_eq!(one.version_code, Some(15));
-        assert!(apk.calls_snapshot().iter().any(|p| p.contains("com.user.one")),
-            "version mismatch must re-parse the apk");
+        assert!(
+            apk.calls_snapshot()
+                .iter()
+                .any(|p| p.contains("com.user.one")),
+            "version mismatch must re-parse the apk"
+        );
         assert_eq!(
             cache.meta_of("com.user.one"),
-            Some(CachedMeta { label: "User One".to_string(), version_code: 15 })
+            Some(CachedMeta {
+                label: "User One".to_string(),
+                version_code: 15
+            })
         );
     }
 
@@ -1462,11 +1654,15 @@ mod tests {
         assert_eq!(one.icon_base64.as_deref(), Some("BwcH"));
         let calls = adb.calls_snapshot();
         assert!(
-            !calls.iter().any(|c| c.len() == 4 && c[2] == "path" && c[3] == "com.user.one"),
+            !calls
+                .iter()
+                .any(|c| c.len() == 4 && c[2] == "path" && c[3] == "com.user.one"),
             "version match must NOT call `pm path`"
         );
         assert!(
-            !apk.calls_snapshot().iter().any(|p| p.contains("com.user.one")),
+            !apk.calls_snapshot()
+                .iter()
+                .any(|p| p.contains("com.user.one")),
             "version match must NOT parse the apk"
         );
     }
@@ -1490,14 +1686,19 @@ mod tests {
         assert_eq!(one.version_code, Some(15));
         assert_eq!(
             cache.meta_of("com.user.one"),
-            Some(CachedMeta { label: "User One".to_string(), version_code: 15 })
+            Some(CachedMeta {
+                label: "User One".to_string(),
+                version_code: 15
+            })
         );
 
         // dumpsys only runs for cache-hit packages (both are cached here, but
         // the uncached com.user.two must not be probed).
         let calls = adb.calls_snapshot();
-        let dumpsys_calls: Vec<&Vec<String>> =
-            calls.iter().filter(|c| c.len() == 4 && c[1] == "dumpsys").collect();
+        let dumpsys_calls: Vec<&Vec<String>> = calls
+            .iter()
+            .filter(|c| c.len() == 4 && c[1] == "dumpsys")
+            .collect();
         assert!(dumpsys_calls.iter().any(|c| c[3] == "com.user.one"));
         assert!(!dumpsys_calls.iter().any(|c| c[3] == "com.user.two"));
     }
@@ -1520,11 +1721,15 @@ mod tests {
         assert_eq!(one.version_code, Some(9));
         let calls = adb.calls_snapshot();
         assert!(
-            !calls.iter().any(|c| c.len() == 4 && c[2] == "path" && c[3] == "com.user.one"),
+            !calls
+                .iter()
+                .any(|c| c.len() == 4 && c[2] == "path" && c[3] == "com.user.one"),
             "version unknown must keep the cache (no pm path)"
         );
         assert!(
-            !apk.calls_snapshot().iter().any(|p| p.contains("com.user.one")),
+            !apk.calls_snapshot()
+                .iter()
+                .any(|p| p.contains("com.user.one")),
             "version unknown must keep the cache (no apk parse)"
         );
     }
@@ -1547,7 +1752,10 @@ mod tests {
 
         // Assert
         assert_eq!(apps.len(), 3);
-        assert!(apps.iter().all(|a| a.installed), "no uninstalled package exists");
+        assert!(
+            apps.iter().all(|a| a.installed),
+            "no uninstalled package exists"
+        );
     }
 
     #[test]
@@ -1568,7 +1776,10 @@ mod tests {
         let gone = find(&apps, "com.sys.gone");
         assert_eq!(gone.kind, AppKind::System);
         assert!(!gone.installed);
-        assert_eq!(gone.label, "com.sys.gone", "no apk path → label degrades to package name");
+        assert_eq!(
+            gone.label, "com.sys.gone",
+            "no apk path → label degrades to package name"
+        );
         assert_eq!(gone.icon_base64, None);
     }
 
@@ -1576,7 +1787,10 @@ mod tests {
     fn test_list_apps_u_flag_error_falls_back_to_installed_listing() {
         // Arrange: the ROM rejects `-u` on both per-kind enumerations.
         let (adb, apk, cache) = listing_fixture();
-        let adb = MockAdb { fail_u: true, ..adb };
+        let adb = MockAdb {
+            fail_u: true,
+            ..adb
+        };
 
         // Act
         let apps = list_apps(&adb, &apk, &cache);
@@ -1624,8 +1838,14 @@ mod tests {
         let apps = list_apps(&adb, &apk, &cache);
 
         // Assert
-        assert!(find(&apps, "com.sys.gone").restorable, "uninstalled system must be restorable");
-        assert!(find(&apps, "com.sys.app").restorable, "installed system must be restorable");
+        assert!(
+            find(&apps, "com.sys.gone").restorable,
+            "uninstalled system must be restorable"
+        );
+        assert!(
+            find(&apps, "com.sys.app").restorable,
+            "installed system must be restorable"
+        );
         assert!(
             !find(&apps, "com.user.one").restorable,
             "user-kind packages are never install-existing-restorable"
@@ -1655,11 +1875,15 @@ mod tests {
         assert_eq!(gone.icon_base64.as_deref(), Some("BAQE"));
         let calls = adb.calls_snapshot();
         assert!(
-            !calls.iter().any(|c| c.len() == 4 && c[2] == "path" && c[3] == "com.gone.app"),
+            !calls
+                .iter()
+                .any(|c| c.len() == 4 && c[2] == "path" && c[3] == "com.gone.app"),
             "cache hit must NOT call `pm path` for the uninstalled package"
         );
         assert!(
-            !apk.calls_snapshot().iter().any(|p| p.contains("com.gone.app")),
+            !apk.calls_snapshot()
+                .iter()
+                .any(|p| p.contains("com.gone.app")),
             "cache hit must NOT parse the apk for the uninstalled package"
         );
     }
@@ -1677,9 +1901,18 @@ mod tests {
         let map = parse_package_paths(out);
 
         // Assert: split at the LAST '=' — the path side keeps its '=' chars.
-        assert_eq!(map.get("com.a"), Some(&"/data/app/~~x==/com.a-1/base.apk".to_string()));
-        assert_eq!(map.get("com.o"), Some(&"/product/overlay/o.apk".to_string()));
-        assert_eq!(map.get("com.sys.app"), Some(&"/system/app/Sys/Sys.apk".to_string()));
+        assert_eq!(
+            map.get("com.a"),
+            Some(&"/data/app/~~x==/com.a-1/base.apk".to_string())
+        );
+        assert_eq!(
+            map.get("com.o"),
+            Some(&"/product/overlay/o.apk".to_string())
+        );
+        assert_eq!(
+            map.get("com.sys.app"),
+            Some(&"/system/app/Sys/Sys.apk".to_string())
+        );
     }
 
     #[test]
@@ -1728,7 +1961,11 @@ mod tests {
         let gone = find(&listing.apps, "com.gone.app");
         assert_eq!(gone.label, "com.gone.app");
         assert_eq!(gone.icon_base64, None);
-        assert_eq!(gone.version_code, Some(3), "degraded entry keeps the device version");
+        assert_eq!(
+            gone.version_code,
+            Some(3),
+            "degraded entry keeps the device version"
+        );
         assert!(!gone.installed);
 
         let pending: Vec<&str> = listing.pending.iter().map(|a| a.package.as_str()).collect();
@@ -1777,11 +2014,16 @@ mod tests {
         assert_eq!(seen[0].version_code, Some(7));
         assert_eq!(
             cache.meta_of("com.sys.app"),
-            Some(CachedMeta { label: "Sys App".to_string(), version_code: 7 })
+            Some(CachedMeta {
+                label: "Sys App".to_string(),
+                version_code: 7
+            })
         );
         assert_eq!(cache.icon_of("com.sys.app", 7), Some(vec![1, 2, 3]));
         assert!(
-            !adb.calls_snapshot().iter().any(|c| c.len() == 4 && c[2] == "path"),
+            !adb.calls_snapshot()
+                .iter()
+                .any(|c| c.len() == 4 && c[2] == "path"),
             "path map must replace per-app `pm path` calls"
         );
     }
@@ -1805,7 +2047,10 @@ mod tests {
 
         // Assert
         assert!(seen.is_empty(), "cached package must not fire the callback");
-        assert!(apk.calls_snapshot().is_empty(), "cached package must not be parsed");
+        assert!(
+            apk.calls_snapshot().is_empty(),
+            "cached package must not be parsed"
+        );
     }
 
     // ---------- helper.dex (T2: parse + resolve_via_helper) ----------
@@ -1835,7 +2080,11 @@ mod tests {
 
         // Assert
         match out {
-            Some(HelperOutcome::Ok { package, label, icon_png }) => {
+            Some(HelperOutcome::Ok {
+                package,
+                label,
+                icon_png,
+            }) => {
                 assert_eq!(package, "com.android.settings");
                 assert_eq!(label, "Cài đặt");
                 assert_eq!(icon_png, Some(vec![0x89, b'P', b'N', b'G', 1, 2, 3]));
@@ -1852,7 +2101,9 @@ mod tests {
 
         // Act/Assert
         match parse_helper_line(&line) {
-            Some(HelperOutcome::Ok { package, icon_png, .. }) => {
+            Some(HelperOutcome::Ok {
+                package, icon_png, ..
+            }) => {
                 assert_eq!(package, "com.some.app");
                 assert_eq!(icon_png, None, "'-' means no icon");
             }
@@ -1916,11 +2167,20 @@ mod tests {
         assert_eq!(seen[0].icon_base64, None);
         assert_eq!(seen[1].package, "com.b");
         assert_eq!(seen[1].icon_base64.as_deref(), Some("CQkJ"));
-        assert_eq!(leftover.iter().map(|a| a.package.as_str()).collect::<Vec<_>>(), ["com.c"]);
+        assert_eq!(
+            leftover
+                .iter()
+                .map(|a| a.package.as_str())
+                .collect::<Vec<_>>(),
+            ["com.c"]
+        );
 
         assert_eq!(
             cache.meta_of("com.a"),
-            Some(CachedMeta { label: "App A".to_string(), version_code: 5 })
+            Some(CachedMeta {
+                label: "App A".to_string(),
+                version_code: 5
+            })
         );
         assert_eq!(cache.icon_of("com.b", 7), Some(vec![9, 9, 9]));
         assert_eq!(cache.meta_of("com.c"), None, "ERR packages are not cached");
@@ -1947,10 +2207,17 @@ mod tests {
         // Assert
         assert!(seen.is_empty(), "fatal helper must not fire the callback");
         assert_eq!(
-            leftover.iter().map(|a| a.package.as_str()).collect::<Vec<_>>(),
+            leftover
+                .iter()
+                .map(|a| a.package.as_str())
+                .collect::<Vec<_>>(),
             ["com.a", "com.b"]
         );
-        assert_eq!(cache.meta_of("com.a"), None, "nothing cached from a dead helper");
+        assert_eq!(
+            cache.meta_of("com.a"),
+            None,
+            "nothing cached from a dead helper"
+        );
     }
 
     // ---------- run_batch ----------
@@ -1963,7 +2230,9 @@ mod tests {
         let mut progress: Vec<BatchProgress> = Vec::new();
 
         // Act
-        let results = run_batch(&adb, &pkgs, BatchOp::Uninstall, &[], &mut |p| progress.push(p));
+        let results = run_batch(&adb, &pkgs, BatchOp::Uninstall, &[], &mut |p| {
+            progress.push(p)
+        });
 
         // Assert
         assert_eq!(results.len(), 1);
@@ -1975,7 +2244,14 @@ mod tests {
             .map(|s| s.to_string())
             .collect();
         assert_eq!(adb.calls_snapshot()[0], expected);
-        assert_eq!(progress, vec![BatchProgress { index: 0, total: 1, package: "com.a".to_string() }]);
+        assert_eq!(
+            progress,
+            vec![BatchProgress {
+                index: 0,
+                total: 1,
+                package: "com.a".to_string()
+            }]
+        );
     }
 
     #[test]
@@ -1986,7 +2262,9 @@ mod tests {
         let mut progress: Vec<BatchProgress> = Vec::new();
 
         // Act
-        let results = run_batch(&adb, &pkgs, BatchOp::Restore, &[], &mut |p| progress.push(p));
+        let results = run_batch(&adb, &pkgs, BatchOp::Restore, &[], &mut |p| {
+            progress.push(p)
+        });
 
         // Assert
         assert!(results[0].success);
@@ -2006,13 +2284,18 @@ mod tests {
         let mut progress: Vec<BatchProgress> = Vec::new();
 
         // Act
-        let results = run_batch(&adb, &pkgs, BatchOp::Uninstall, &blacklist, &mut |p| progress.push(p));
+        let results = run_batch(&adb, &pkgs, BatchOp::Uninstall, &blacklist, &mut |p| {
+            progress.push(p)
+        });
 
         // Assert: blocked entry fails without any adb attempt; the rest proceeds.
         assert_eq!(results.len(), 2);
         assert!(!results[0].success);
         assert_eq!(results[0].package, "com.bad");
-        assert_eq!(results[0].message, "Blocked: package thuộc danh sách cấm gỡ");
+        assert_eq!(
+            results[0].message,
+            "Blocked: package thuộc danh sách cấm gỡ"
+        );
         assert!(results[1].success);
         assert_eq!(results[1].package, "com.good");
 
@@ -2023,7 +2306,11 @@ mod tests {
         // Progress only fires right before adb attempts (after blacklist check).
         assert_eq!(
             progress,
-            vec![BatchProgress { index: 1, total: 2, package: "com.good".to_string() }]
+            vec![BatchProgress {
+                index: 1,
+                total: 2,
+                package: "com.good".to_string()
+            }]
         );
     }
 
@@ -2042,7 +2329,9 @@ mod tests {
         let mut progress: Vec<BatchProgress> = Vec::new();
 
         // Act
-        let results = run_batch(&adb, &pkgs, BatchOp::Uninstall, &[], &mut |p| progress.push(p));
+        let results = run_batch(&adb, &pkgs, BatchOp::Uninstall, &[], &mut |p| {
+            progress.push(p)
+        });
 
         // Assert
         assert_eq!(results.len(), 3);
@@ -2054,9 +2343,21 @@ mod tests {
         assert_eq!(
             progress,
             vec![
-                BatchProgress { index: 0, total: 3, package: "com.ok1".to_string() },
-                BatchProgress { index: 1, total: 3, package: "com.fail".to_string() },
-                BatchProgress { index: 2, total: 3, package: "com.ok2".to_string() },
+                BatchProgress {
+                    index: 0,
+                    total: 3,
+                    package: "com.ok1".to_string()
+                },
+                BatchProgress {
+                    index: 1,
+                    total: 3,
+                    package: "com.fail".to_string()
+                },
+                BatchProgress {
+                    index: 2,
+                    total: 3,
+                    package: "com.ok2".to_string()
+                },
             ]
         );
     }
@@ -2069,7 +2370,9 @@ mod tests {
         let mut progress: Vec<BatchProgress> = Vec::new();
 
         // Act
-        let results = run_batch(&adb, &pkgs, BatchOp::Uninstall, &[], &mut |p| progress.push(p));
+        let results = run_batch(&adb, &pkgs, BatchOp::Uninstall, &[], &mut |p| {
+            progress.push(p)
+        });
 
         // Assert
         assert!(results.is_empty());
@@ -2094,7 +2397,10 @@ mod tests {
         let (user, system, user_all, system_all, versions) = parsed.expect("well-formed batch");
         assert_eq!(user, vec!["com.a".to_string(), "com.b".to_string()]);
         assert_eq!(system, vec!["com.sys".to_string()]);
-        assert_eq!(user_all, vec!["com.a".to_string(), "com.hidden".to_string()]);
+        assert_eq!(
+            user_all,
+            vec!["com.a".to_string(), "com.hidden".to_string()]
+        );
         assert_eq!(system_all, vec!["com.sys".to_string()]);
         assert_eq!(versions.get("com.a"), Some(&42u64));
     }
@@ -2142,8 +2448,14 @@ mod tests {
         // Arrange: hidden packages have no `pm list -f` path — the helper
         // cannot see them, so they pull (fast negative-cache) concurrently.
         let paths = HashMap::from([
-            ("com.normal".to_string(), "/data/app/~~x==/com.normal-1==/base.apk".to_string()),
-            ("com.sysui.overlay.anim".to_string(), "/product/overlay/SystemUIAnim.apk".to_string()),
+            (
+                "com.normal".to_string(),
+                "/data/app/~~x==/com.normal-1==/base.apk".to_string(),
+            ),
+            (
+                "com.sysui.overlay.anim".to_string(),
+                "/product/overlay/SystemUIAnim.apk".to_string(),
+            ),
             // com.hidden has no path at all (uninstalled for user 0)
         ]);
         let pending = vec![
@@ -2158,11 +2470,17 @@ mod tests {
         // Assert: path presence decides — overlay in the PATH still goes to
         // the helper (it resolves those fine).
         assert_eq!(
-            helper_set.iter().map(|a| a.package.as_str()).collect::<Vec<_>>(),
+            helper_set
+                .iter()
+                .map(|a| a.package.as_str())
+                .collect::<Vec<_>>(),
             ["com.normal", "com.sysui.overlay.anim"]
         );
         assert_eq!(
-            pull_set.iter().map(|a| a.package.as_str()).collect::<Vec<_>>(),
+            pull_set
+                .iter()
+                .map(|a| a.package.as_str())
+                .collect::<Vec<_>>(),
             ["com.hidden"]
         );
     }
@@ -2187,11 +2505,17 @@ mod tests {
 
         // Assert
         assert_eq!(
-            helper_set.iter().map(|a| a.package.as_str()).collect::<Vec<_>>(),
+            helper_set
+                .iter()
+                .map(|a| a.package.as_str())
+                .collect::<Vec<_>>(),
             ["com.a", "com.b"]
         );
         assert_eq!(
-            pull_set.iter().map(|a| a.package.as_str()).collect::<Vec<_>>(),
+            pull_set
+                .iter()
+                .map(|a| a.package.as_str())
+                .collect::<Vec<_>>(),
             ["com.h1", "com.h2"]
         );
     }
@@ -2224,19 +2548,17 @@ mod tests {
                 let label = format!("Label {}", pkg);
                 apk = apk.result(path, Ok((label.as_str(), Some(vec![9, 9]), Some(5))));
             }
-            (Box::new(MockAdb::default()) as Box<dyn AdbLike + Send>, Box::new(apk) as Box<dyn ApkLike + Send>)
+            (
+                Box::new(MockAdb::default()) as Box<dyn AdbLike + Send>,
+                Box::new(apk) as Box<dyn ApkLike + Send>,
+            )
         };
         let mut resolved: Vec<AppInfo> = Vec::new();
 
         // Act
-        resolve_pending_parallel(
-            &cache,
-            &spawn_context,
-            &pending,
-            &paths,
-            2,
-            &mut |info| resolved.push(info),
-        );
+        resolve_pending_parallel(&cache, &spawn_context, &pending, &paths, 2, &mut |info| {
+            resolved.push(info)
+        });
 
         // Assert: every app resolved exactly once with parse output; cache
         // written once per app (collector thread, never concurrent).
@@ -2269,19 +2591,17 @@ mod tests {
             let mut apk = MockApk::default();
             apk = apk.result("/product/overlay/x.apk", Err("pull denied"));
             apk = apk.result("/vendor/overlay/y.apk", Err("pull denied"));
-            (Box::new(MockAdb::default()) as Box<dyn AdbLike + Send>, Box::new(apk) as Box<dyn ApkLike + Send>)
+            (
+                Box::new(MockAdb::default()) as Box<dyn AdbLike + Send>,
+                Box::new(apk) as Box<dyn ApkLike + Send>,
+            )
         };
         let mut resolved: Vec<AppInfo> = Vec::new();
 
         // Act
-        resolve_pending_parallel(
-            &cache,
-            &spawn_context,
-            &pending,
-            &paths,
-            2,
-            &mut |info| resolved.push(info),
-        );
+        resolve_pending_parallel(&cache, &spawn_context, &pending, &paths, 2, &mut |info| {
+            resolved.push(info)
+        });
 
         // Assert
         assert_eq!(resolved.len(), 2);
@@ -2301,19 +2621,17 @@ mod tests {
         let pending: Vec<AppInfo> = Vec::new();
         let cache = MockCache::default();
         let spawn_context = || {
-            (Box::new(MockAdb::default()) as Box<dyn AdbLike + Send>, Box::new(MockApk::default()) as Box<dyn ApkLike + Send>)
+            (
+                Box::new(MockAdb::default()) as Box<dyn AdbLike + Send>,
+                Box::new(MockApk::default()) as Box<dyn ApkLike + Send>,
+            )
         };
         let mut resolved: Vec<AppInfo> = Vec::new();
 
         // Act
-        resolve_pending_parallel(
-            &cache,
-            &spawn_context,
-            &pending,
-            &paths,
-            6,
-            &mut |info| resolved.push(info),
-        );
+        resolve_pending_parallel(&cache, &spawn_context, &pending, &paths, 6, &mut |info| {
+            resolved.push(info)
+        });
 
         // Assert
         assert!(resolved.is_empty());
@@ -2365,7 +2683,11 @@ mod tests {
         let b: Vec<_> = via_parsed.apps.iter().map(app_key).collect();
         assert_eq!(a, b);
         let pa: Vec<_> = via_fast.pending.iter().map(|x| x.package.clone()).collect();
-        let pb: Vec<_> = via_parsed.pending.iter().map(|x| x.package.clone()).collect();
+        let pb: Vec<_> = via_parsed
+            .pending
+            .iter()
+            .map(|x| x.package.clone())
+            .collect();
         assert_eq!(pa, pb);
     }
 

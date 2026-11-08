@@ -16,7 +16,7 @@
 //!   splits), each contributing its `resources.arsc` and a zip reader.
 
 use apk_info::structs::{ResTableConfig, ResTableEntry, ResourceValueType};
-use apk_info::{ARSC, Apk};
+use apk_info::{Apk, ARSC};
 
 /// Max recursion depth when a resource references another resource.
 const MAX_REF_DEPTH: usize = 5;
@@ -158,8 +158,12 @@ impl MultiSource {
                     continue;
                 }
                 for (cfg, type_map) in pkg.resources.iter() {
-                    let Some(entries) = type_map.get(&type_id) else { continue };
-                    let Some(entry) = entries.find(entry_id) else { continue };
+                    let Some(entries) = type_map.get(&type_id) else {
+                        continue;
+                    };
+                    let Some(entry) = entries.find(entry_id) else {
+                        continue;
+                    };
                     let value = match decode_entry(entry) {
                         Decoded::Ref(ref_id) => {
                             if ref_id != id {
@@ -243,9 +247,15 @@ impl MultiSource {
                 let mut configs: Vec<&ResTableConfig> = pkg.resources.keys().collect();
                 configs.sort_by_key(|cfg| config_rank(cfg));
                 for cfg in configs {
-                    let Some(type_map) = pkg.resources.get(cfg) else { continue };
-                    let Some(entries) = type_map.get(&type_id) else { continue };
-                    let Some(entry) = entries.find(entry_id) else { continue };
+                    let Some(type_map) = pkg.resources.get(cfg) else {
+                        continue;
+                    };
+                    let Some(entries) = type_map.get(&type_id) else {
+                        continue;
+                    };
+                    let Some(entry) = entries.find(entry_id) else {
+                        continue;
+                    };
                     let value = match decode_entry(entry) {
                         Decoded::Ref(ref_id) => {
                             if ref_id == id {
@@ -313,7 +323,10 @@ impl ResourceResolver for MultiSource {
 enum Decoded<'a> {
     Ref(u32),
     Borrowed(&'a apk_info::structs::ResourceValue),
-    Owned { data_type: ResourceValueType, data: u32 },
+    Owned {
+        data_type: ResourceValueType,
+        data: u32,
+    },
     None,
 }
 
@@ -334,7 +347,10 @@ fn decode_entry(entry: &ResTableEntry) -> Decoded<'_> {
             ResourceValueType::Reference | ResourceValueType::DynamicReference => {
                 Decoded::Ref(e.data)
             }
-            data_type => Decoded::Owned { data_type, data: e.data },
+            data_type => Decoded::Owned {
+                data_type,
+                data: e.data,
+            },
         },
         _ => Decoded::None,
     }
@@ -401,8 +417,14 @@ mod tests {
 
         // Act / Assert
         assert_eq!(config_rank(&default), 0, "default config must win");
-        assert!(config_rank(&d640) < config_rank(&d120), "higher density wins");
-        assert!(config_rank(&d120) < config_rank(&d0), "density-0 non-default is worst");
+        assert!(
+            config_rank(&d640) < config_rank(&d120),
+            "higher density wins"
+        );
+        assert!(
+            config_rank(&d120) < config_rank(&d0),
+            "density-0 non-default is worst"
+        );
     }
 
     #[test]
@@ -418,7 +440,10 @@ mod tests {
         let decoded = decode_entry(&entry);
 
         // Assert: the value payload must surface as a reference id.
-        assert!(matches!(decoded, Decoded::Ref(0x7f0d0002)), "got {decoded:?}");
+        assert!(
+            matches!(decoded, Decoded::Ref(0x7f0d0002)),
+            "got {decoded:?}"
+        );
     }
 
     #[test]
@@ -435,7 +460,13 @@ mod tests {
 
         // Assert: payload preserved for the caller's string-pool lookup.
         assert!(
-            matches!(decoded, Decoded::Owned { data_type: ResourceValueType::String, data: 42 }),
+            matches!(
+                decoded,
+                Decoded::Owned {
+                    data_type: ResourceValueType::String,
+                    data: 42
+                }
+            ),
             "got {decoded:?}"
         );
     }
@@ -444,7 +475,10 @@ mod tests {
     fn test_null_resolver_never_resolves() {
         // Arrange/Act/Assert: the degraded resolver mirrors the old `None` ARSC.
         assert_eq!(NullResolver.get_resource_value(0x7f0d0002), None);
-        assert_eq!(NullResolver.get_resource_value_by_name("mipmap/ic_launcher"), None);
+        assert_eq!(
+            NullResolver.get_resource_value_by_name("mipmap/ic_launcher"),
+            None
+        );
         assert!(NullResolver.axml_arsc().is_none());
     }
 
@@ -455,8 +489,16 @@ mod tests {
         assert_eq!(variant_group("res/mipmap-anydpi/ic_launcher.xml"), 0);
         assert_eq!(variant_group("res/mipmap-xxxhdpi-v4/ic_launcher.png"), 1);
         assert_eq!(variant_group("res/mipmap-mdpi/ic_launcher.png"), 1);
-        assert_eq!(variant_group("res/drawable-xhdpi/icon.xml"), 1, "density xml is not anydpi");
-        assert_eq!(variant_group("res/mipmap-anydpi/ic_launcher.webp"), 1, "raster is not xml");
+        assert_eq!(
+            variant_group("res/drawable-xhdpi/icon.xml"),
+            1,
+            "density xml is not anydpi"
+        );
+        assert_eq!(
+            variant_group("res/mipmap-anydpi/ic_launcher.webp"),
+            1,
+            "raster is not xml"
+        );
     }
 
     #[test]
@@ -471,14 +513,21 @@ mod tests {
         d0.screen_type = 0x0000_0001; // non-default (orientation set), density 0
 
         // Act / Assert: higher density first; default and unknown density last.
-        assert!(variant_cfg_rank(&d480) < variant_cfg_rank(&d120), "higher density wins");
+        assert!(
+            variant_cfg_rank(&d480) < variant_cfg_rank(&d120),
+            "higher density wins"
+        );
         assert_eq!(variant_cfg_rank(&d120), u64::from(u16::MAX) - 120);
         assert_eq!(
             variant_cfg_rank(&default),
             u64::from(u16::MAX),
             "default config ranks last (may be a low-density entry)"
         );
-        assert_eq!(variant_cfg_rank(&d0), u64::from(u16::MAX), "unknown density ties last");
+        assert_eq!(
+            variant_cfg_rank(&d0),
+            u64::from(u16::MAX),
+            "unknown density ties last"
+        );
     }
 
     /// T-A spike: the ranked variants of a real manifest icon resource must
@@ -512,7 +561,10 @@ mod tests {
             .iter()
             .position(|v| !(v.ends_with(".xml") && v.contains("anydpi")));
         if let (Some(l), Some(o)) = (last_anydpi, first_other) {
-            assert!(l < o, "anydpi xmls must precede all other variants: {variants:?}");
+            assert!(
+                l < o,
+                "anydpi xmls must precede all other variants: {variants:?}"
+            );
         }
         // Higher-density rasters must precede lower-density ones (the
         // default-config value — whatever path it points at — sorts last).
@@ -524,7 +576,10 @@ mod tests {
         }
         let has_q = |v: &str, q: &str| dir_of(v).split('-').any(|seg| seg == q);
         let pos = |q: &str| {
-            variants.iter().position(|v| has_q(v, q)).expect("fixture entry missing")
+            variants
+                .iter()
+                .position(|v| has_q(v, q))
+                .expect("fixture entry missing")
         };
         let xxx = pos("xxxhdpi");
         for lower in ["xhdpi", "hdpi", "mdpi", "ldpi"] {

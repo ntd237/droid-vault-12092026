@@ -75,7 +75,9 @@ fn parse_icon_ref_token(raw: &str) -> Option<IconRef> {
     if rest.contains('/') {
         return Some(IconRef::Name(rest.to_string()));
     }
-    u32::from_str_radix(rest.strip_prefix("0x").unwrap_or(rest), 16).ok().map(IconRef::Id)
+    u32::from_str_radix(rest.strip_prefix("0x").unwrap_or(rest), 16)
+        .ok()
+        .map(IconRef::Id)
 }
 
 /// Manifest-anchored icon variants (T-A step 0 source): resolve the
@@ -107,8 +109,7 @@ fn render_anchored_variants(
     multi: &crate::arsc_resolve::MultiSource,
     read_entry: &dyn Fn(&str) -> Option<Vec<u8>>,
 ) -> Option<Vec<u8>> {
-    let raster_remaining =
-        |from: usize| variants[from..].iter().any(|v| !v.ends_with(".xml"));
+    let raster_remaining = |from: usize| variants[from..].iter().any(|v| !v.ends_with(".xml"));
     for (i, entry) in variants.iter().enumerate() {
         let bytes = read_entry(entry)?;
         if bytes.is_empty() {
@@ -247,12 +248,18 @@ fn parse_apk_inner(path: &Path, splits: &[PathBuf]) -> Result<ApkInfo, String> {
         // it for the base+split pipeline (fallback path only).
         // Skippable split parse failures: the base alone still resolves.
         let base = apk_info::Apk::new(path).ok()?;
-        let split_apks: Vec<apk_info::Apk> =
-            splits.iter().filter_map(|p| apk_info::Apk::new(p).ok()).collect();
+        let split_apks: Vec<apk_info::Apk> = splits
+            .iter()
+            .filter_map(|p| apk_info::Apk::new(p).ok())
+            .collect();
         multi_apk_icon(base, split_apks)
     });
 
-    Ok(ApkInfo { label, icon_png, version_code })
+    Ok(ApkInfo {
+        label,
+        icon_png,
+        version_code,
+    })
 }
 
 /// Single-APK icon pipeline: adaptive-first (T-E), then the ARSC-resolved
@@ -454,10 +461,17 @@ mod tests {
         assert!(&icon[..4] == b"\x89PNG", "icon must be PNG bytes");
 
         let pixmap = tiny_skia::Pixmap::decode_png(&icon).expect("icon must decode as PNG");
-        assert_eq!((pixmap.width(), pixmap.height()), (192, 192), "rendered at 192x192");
+        assert_eq!(
+            (pixmap.width(), pixmap.height()),
+            (192, 192),
+            "rendered at 192x192"
+        );
         // Non-trivial painted content: the bitmap layers actually rendered.
         let painted = pixmap.data().chunks_exact(4).filter(|px| px[3] > 0).count();
-        assert!(painted > 1000, "icon must have painted pixels, got {painted}");
+        assert!(
+            painted > 1000,
+            "icon must have painted pixels, got {painted}"
+        );
         println!("SPIKE: Sheets icon rendered, {} bytes", icon.len());
     }
 
@@ -470,7 +484,10 @@ mod tests {
     fn parses_real_apk_with_splits_single_apk_regression() {
         let gorio = std::env::var("DV_GORIO_APK").ok();
         let roaming = std::env::var("DV_ROAMING_APK").ok();
-        assert!(gorio.is_some() || roaming.is_some(), "set DV_GORIO_APK or DV_ROAMING_APK");
+        assert!(
+            gorio.is_some() || roaming.is_some(),
+            "set DV_GORIO_APK or DV_ROAMING_APK"
+        );
 
         for (path, name) in gorio
             .map(|p| (p, "Gorio"))
@@ -534,11 +551,7 @@ mod tests {
             "icon must be RIFF/WebP or PNG bytes, got {:?}",
             &icon[..4.min(icon.len())]
         );
-        println!(
-            "SPIKE: label={:?}, icon={} bytes",
-            info.label,
-            icon.len()
-        );
+        println!("SPIKE: label={:?}, icon={} bytes", info.label, icon.len());
     }
 
     /// Adaptive-icon acceptance: an APK with ONLY an adaptive icon XML
@@ -553,7 +566,11 @@ mod tests {
         assert_eq!(info.label, "GitHub", "label must be resolved");
         let icon = info.icon_png.expect("adaptive icon must render to PNG");
         assert!(&icon[..4] == b"\x89PNG", "icon must be PNG bytes");
-        assert!(icon.len() > 512, "icon must be non-trivial, got {} bytes", icon.len());
+        assert!(
+            icon.len() > 512,
+            "icon must be non-trivial, got {} bytes",
+            icon.len()
+        );
 
         let pixmap = tiny_skia::Pixmap::decode_png(&icon).expect("icon must decode as PNG");
         assert_eq!(
@@ -562,11 +579,7 @@ mod tests {
             "icon must be rendered at 192x192"
         );
         // Non-trivial painted content: not a fully transparent image.
-        let painted = pixmap
-            .data()
-            .chunks_exact(4)
-            .filter(|px| px[3] > 0)
-            .count();
+        let painted = pixmap.data().chunks_exact(4).filter(|px| px[3] > 0).count();
         assert!(painted > 64, "icon must have painted pixels, got {painted}");
         // The white octocat foreground must actually render (T-B: the zip
         // entry path bug previously dropped all XML layers).
@@ -575,7 +588,10 @@ mod tests {
             .chunks_exact(4)
             .filter(|px| px[3] > 200 && px[0] > 240 && px[1] > 240 && px[2] > 240)
             .count();
-        assert!(white > 100, "white foreground pixels must render, got {white}");
+        assert!(
+            white > 100,
+            "white foreground pixels must render, got {white}"
+        );
     }
 
     /// Regression guard: an APK with a plain raster launcher icon still
@@ -632,7 +648,10 @@ mod tests {
     fn parses_real_apk_adaptive_first_icon_fills_canvas() {
         let gorio = std::env::var("DV_GORIO_APK").ok();
         let gsm = std::env::var("DV_GSM_APK").ok();
-        assert!(gorio.is_some() || gsm.is_some(), "set DV_GORIO_APK or DV_GSM_APK");
+        assert!(
+            gorio.is_some() || gsm.is_some(),
+            "set DV_GORIO_APK or DV_GSM_APK"
+        );
 
         for (path, name) in gorio
             .map(|p| (p, "Gorio"))
@@ -665,7 +684,10 @@ mod tests {
     fn parses_real_apk_adaptive_foreground_renders_color_diversity() {
         let gorio = std::env::var("DV_GORIO_APK").ok();
         let greensm = std::env::var("DV_GREENSM_APK").ok();
-        assert!(gorio.is_some() || greensm.is_some(), "set DV_GORIO_APK or DV_GREENSM_APK");
+        assert!(
+            gorio.is_some() || greensm.is_some(),
+            "set DV_GORIO_APK or DV_GREENSM_APK"
+        );
 
         for (path, name) in gorio
             .map(|p| (p, "Gorio"))
@@ -755,7 +777,11 @@ mod tests {
         assert_eq!(info.label, "Shopee", "label must be resolved");
         let icon = info.icon_png.expect("bitmap drawable icon must render");
         assert!(&icon[..4] == b"\x89PNG", "icon must be PNG bytes");
-        assert!(icon.len() > 512, "icon must be non-trivial, got {} bytes", icon.len());
+        assert!(
+            icon.len() > 512,
+            "icon must be non-trivial, got {} bytes",
+            icon.len()
+        );
     }
 
     // ---------- T-A: manifest-anchored icon resolution ----------
@@ -764,8 +790,14 @@ mod tests {
     fn parse_icon_ref_token_parses_hex_id_named_and_rejects_non_refs() {
         // Arrange / Act / Assert: the hex fallback the AXML decoder emits
         // without an ARSC, the 0x form, named forms, and non-references.
-        assert_eq!(parse_icon_ref_token("@7f0d0002"), Some(IconRef::Id(0x7f0d0002)));
-        assert_eq!(parse_icon_ref_token("@0x7f0d0002"), Some(IconRef::Id(0x7f0d0002)));
+        assert_eq!(
+            parse_icon_ref_token("@7f0d0002"),
+            Some(IconRef::Id(0x7f0d0002))
+        );
+        assert_eq!(
+            parse_icon_ref_token("@0x7f0d0002"),
+            Some(IconRef::Id(0x7f0d0002))
+        );
         assert_eq!(
             parse_icon_ref_token("@mipmap/ic_launcher"),
             Some(IconRef::Name("mipmap/ic_launcher".to_string()))
@@ -820,7 +852,10 @@ mod tests {
     fn manifest_anchor_c1_stub_apps_render_distinct_icons() {
         let paths = std::env::var("DV_T1_C1_APKS").expect("DV_T1_C1_APKS must be set");
         let apps: Vec<String> = paths.split(';').map(str::to_string).collect();
-        assert!(apps.len() >= 2, "need at least 2 C1 fixtures for byte-distinctness");
+        assert!(
+            apps.len() >= 2,
+            "need at least 2 C1 fixtures for byte-distinctness"
+        );
 
         let mut icons: Vec<(String, Vec<u8>)> = Vec::new();
         for path in &apps {
@@ -936,7 +971,11 @@ mod tests {
             white <= 0.90,
             "apkpure icon must not be a near-white stub render (bug C3), got {white:.3}"
         );
-        println!("SPIKE: apkpure icon {} bytes (mdpi render {} bytes)", icon.len(), mdpi_render.len());
+        println!(
+            "SPIKE: apkpure icon {} bytes (mdpi render {} bytes)",
+            icon.len(),
+            mdpi_render.len()
+        );
     }
 
     /// C3c (Google Wallet): the adaptive MP.xml render misses a layer and
@@ -948,8 +987,11 @@ mod tests {
     fn manifest_anchor_c3_wallet_renders_colored_icon() {
         let path = std::env::var("DV_T1_WALLET_APK").expect("DV_T1_WALLET_APK must be set");
         let splits = std::env::var("DV_T1_WALLET_SPLITS").unwrap_or_default();
-        let splits: Vec<PathBuf> =
-            splits.split(';').filter(|s| !s.is_empty()).map(PathBuf::from).collect();
+        let splits: Vec<PathBuf> = splits
+            .split(';')
+            .filter(|s| !s.is_empty())
+            .map(PathBuf::from)
+            .collect();
         let info = parse_apk_with_splits(Path::new(&path), &splits).expect("parse must work");
 
         let icon = info.icon_png.expect("wallet icon must be Some");
@@ -977,11 +1019,16 @@ mod tests {
     fn manifest_anchor_c4_docs_with_splits_renders_icon() {
         let base = std::env::var("DV_T1_DOCS_BASE").expect("DV_T1_DOCS_BASE must be set");
         let splits = std::env::var("DV_T1_DOCS_SPLITS").expect("DV_T1_DOCS_SPLITS must be set");
-        let splits: Vec<PathBuf> =
-            splits.split(';').filter(|s| !s.is_empty()).map(PathBuf::from).collect();
+        let splits: Vec<PathBuf> = splits
+            .split(';')
+            .filter(|s| !s.is_empty())
+            .map(PathBuf::from)
+            .collect();
         let info = parse_apk_with_splits(Path::new(&base), &splits).expect("parse must work");
 
-        let icon = info.icon_png.expect("drive icon must render with splits (bug C4: was None)");
+        let icon = info
+            .icon_png
+            .expect("drive icon must render with splits (bug C4: was None)");
         assert!(!icon.is_empty(), "icon must be non-empty");
         println!("SPIKE: drive icon {} bytes", icon.len());
     }
@@ -993,7 +1040,8 @@ mod tests {
     #[test]
     #[ignore = "requires the My Files fixture; set DV_T1_FILEMANAGER_APK to run"]
     fn manifest_anchor_c4_filemanager_base_only_renders_icon() {
-        let path = std::env::var("DV_T1_FILEMANAGER_APK").expect("DV_T1_FILEMANAGER_APK must be set");
+        let path =
+            std::env::var("DV_T1_FILEMANAGER_APK").expect("DV_T1_FILEMANAGER_APK must be set");
         let info = parse_apk(Path::new(&path)).expect("parse must work");
 
         let icon = info
@@ -1005,11 +1053,7 @@ mod tests {
 
     /// TEMP diag helper: recursively resolve and dump a reference token's
     /// target AXML structure (WALLET deep-dump).
-    fn dump_ref_deep(
-        multi: &crate::arsc_resolve::MultiSource,
-        raw: &str,
-        depth: usize,
-    ) {
+    fn dump_ref_deep(multi: &crate::arsc_resolve::MultiSource, raw: &str, depth: usize) {
         if depth > 3 {
             return;
         }
@@ -1024,7 +1068,11 @@ mod tests {
             return;
         };
         let Ok(axml) = apk_info::AXML::new(&mut &bytes[..], multi.axml_arsc()) else {
-            println!("      {} {value}: not AXML ({} bytes)", "  ".repeat(depth), bytes.len());
+            println!(
+                "      {} {value}: not AXML ({} bytes)",
+                "  ".repeat(depth),
+                bytes.len()
+            );
             return;
         };
         println!(
@@ -1054,7 +1102,8 @@ mod tests {
     /// Set `DV_T1_DIAG_APKS` (semicolon-separated apk paths).
     #[test]
     #[ignore = "diagnostics; set DV_T1_DIAG_APKS (semicolon-separated) to run"]
-    fn diag_manifest_icon_anchor_dump() {        let paths = std::env::var("DV_T1_DIAG_APKS").expect("DV_T1_DIAG_APKS must be set");
+    fn diag_manifest_icon_anchor_dump() {
+        let paths = std::env::var("DV_T1_DIAG_APKS").expect("DV_T1_DIAG_APKS must be set");
         for p in paths.split(';') {
             let apk = match apk_info::Apk::new(Path::new(p)) {
                 Ok(a) => a,
@@ -1097,9 +1146,11 @@ mod tests {
                         Some(n) => {
                             if v.ends_with(".xml") {
                                 match multi.read_entry(v).map(|b| {
-                                    vector::adaptive_icon_png_res(&b, &|name: &str| {
-                                        multi.read_entry(name)
-                                    }, &multi)
+                                    vector::adaptive_icon_png_res(
+                                        &b,
+                                        &|name: &str| multi.read_entry(name),
+                                        &multi,
+                                    )
                                 }) {
                                     Some(Some(png)) => format!(
                                         "xml render {}B colors={}",
@@ -1119,9 +1170,7 @@ mod tests {
                 // Dump the first XML variant's decoded structure.
                 if let Some(v) = variants.iter().find(|v| v.ends_with(".xml")) {
                     if let Some(bytes) = multi.read_entry(v) {
-                        if let Ok(axml) =
-                            apk_info::AXML::new(&mut &bytes[..], multi.axml_arsc())
-                        {
+                        if let Ok(axml) = apk_info::AXML::new(&mut &bytes[..], multi.axml_arsc()) {
                             println!("  xml root={}", axml.root.name());
                             for child in axml.root.childrens() {
                                 println!(
@@ -1182,7 +1231,15 @@ mod tests {
                         let tops: Vec<String> = top
                             .into_iter()
                             .take(5)
-                            .map(|(c, n)| format!("#{:02x}{:02x}{:02x}={:.1}%", c.0, c.1, c.2, n as f32 * 100.0 / total.max(1) as f32))
+                            .map(|(c, n)| {
+                                format!(
+                                    "#{:02x}{:02x}{:02x}={:.1}%",
+                                    c.0,
+                                    c.1,
+                                    c.2,
+                                    n as f32 * 100.0 / total.max(1) as f32
+                                )
+                            })
                             .collect();
                         println!(
                             "  current_render={} bytes, distinct={}, top: {}",
@@ -1223,7 +1280,10 @@ mod tests {
         {
             let id = u32::from_str_radix(id.trim().trim_start_matches("0x"), 16)
                 .expect("hex resource id");
-            println!("DIAG2 id {id:#010x}: variants = {:?}", multi.get_resource_variants(id));
+            println!(
+                "DIAG2 id {id:#010x}: variants = {:?}",
+                multi.get_resource_variants(id)
+            );
         }
     }
 
@@ -1242,7 +1302,10 @@ mod tests {
     fn icon_looks_weak_flags_solid_accepts_rich_and_skips_non_png() {
         // Solid background-only render (Gboard symptom) is weak.
         let solid = svg_png("<rect width=\"64\" height=\"64\" fill=\"#4285f4\"/>");
-        assert!(icon_looks_weak(&solid), "solid-color PNG must classify weak");
+        assert!(
+            icon_looks_weak(&solid),
+            "solid-color PNG must classify weak"
+        );
 
         // Content-rich render is healthy.
         let rich = svg_png(
@@ -1251,10 +1314,16 @@ mod tests {
              <circle cx=\"44\" cy=\"44\" r=\"12\" fill=\"#ea4335\"/>\
              <rect x=\"28\" y=\"28\" width=\"10\" height=\"10\" fill=\"#34a853\"/>",
         );
-        assert!(!icon_looks_weak(&rich), "multi-color PNG must classify healthy");
+        assert!(
+            !icon_looks_weak(&rich),
+            "multi-color PNG must classify healthy"
+        );
 
         // Non-PNG bytes (WebP rasters) and empty bytes cannot be judged.
-        assert!(!icon_looks_weak(b"RIFF\x00\x00\x00\x00WEBPVP8 junk"), "webp must not be weak");
+        assert!(
+            !icon_looks_weak(b"RIFF\x00\x00\x00\x00WEBPVP8 junk"),
+            "webp must not be weak"
+        );
         assert!(!icon_looks_weak(&[]), "empty bytes must not be weak");
     }
 
@@ -1272,9 +1341,18 @@ mod tests {
             assert_eq!(&icon[..4], b"\x89PNG", "{what}: must be a rendered PNG");
             let colors = vector::distinct_opaque_colors(icon);
             let dominant = vector::dominant_opaque_fraction(icon);
-            println!("SPIKE gboard {what}: {} bytes colors={colors} dominant={dominant:.3}", icon.len());
-            assert!(colors >= 8, "{what}: foreground must add content colors, got {colors}");
-            assert!(dominant <= 0.95, "{what}: one color must not dominate, got {dominant:.3}");
+            println!(
+                "SPIKE gboard {what}: {} bytes colors={colors} dominant={dominant:.3}",
+                icon.len()
+            );
+            assert!(
+                colors >= 8,
+                "{what}: foreground must add content colors, got {colors}"
+            );
+            assert!(
+                dominant <= 0.95,
+                "{what}: one color must not dominate, got {dominant:.3}"
+            );
         };
 
         let base_info = parse_apk(Path::new(&base)).expect("base-only parse must work");
@@ -1286,7 +1364,10 @@ mod tests {
         if let Ok(split) = std::env::var("DV_T1_RES_GBOARD_SPLIT") {
             let info = parse_apk_with_splits(Path::new(&base), &[PathBuf::from(&split)])
                 .expect("parse with split must work");
-            assert_rich(&info.icon_png.expect("split icon must be Some"), "with-split");
+            assert_rich(
+                &info.icon_png.expect("split icon must be Some"),
+                "with-split",
+            );
         }
     }
 
@@ -1300,7 +1381,12 @@ mod tests {
         let info = parse_apk(Path::new(&path)).expect("parse must work");
 
         let icon = info.icon_png.expect("icon must be Some");
-        assert_eq!(&icon[..4], b"\x89PNG", "must be PNG bytes, got {:?}", &icon[..4]);
+        assert_eq!(
+            &icon[..4],
+            b"\x89PNG",
+            "must be PNG bytes, got {:?}",
+            &icon[..4]
+        );
         let colors = vector::distinct_opaque_colors(&icon);
         println!("SPIKE coccoc: {} bytes colors={colors}", icon.len());
         assert!(colors >= 8, "icon must be content-rich, got {colors}");
@@ -1316,12 +1402,23 @@ mod tests {
         let info = parse_apk(Path::new(&path)).expect("parse must work");
 
         let icon = info.icon_png.expect("icon must be Some");
-        assert_eq!(&icon[..4], b"\x89PNG", "must be PNG bytes, got {:?}", &icon[..4]);
+        assert_eq!(
+            &icon[..4],
+            b"\x89PNG",
+            "must be PNG bytes, got {:?}",
+            &icon[..4]
+        );
         let colors = vector::distinct_opaque_colors(&icon);
         let dominant = vector::dominant_opaque_fraction(&icon);
-        println!("SPIKE onedrive: {} bytes colors={colors} dominant={dominant:.3}", icon.len());
+        println!(
+            "SPIKE onedrive: {} bytes colors={colors} dominant={dominant:.3}",
+            icon.len()
+        );
         assert!(colors >= 8, "icon must be content-rich, got {colors}");
-        assert!(dominant <= 0.95, "one color must not dominate, got {dominant:.3}");
+        assert!(
+            dominant <= 0.95,
+            "one color must not dominate, got {dominant:.3}"
+        );
     }
 
     /// R2-F4: a white-bg WebP raster fallback must pre-render through the SVG
@@ -1367,7 +1464,10 @@ mod tests {
                 info.version_code.is_some(),
                 "{name} must expose a versionCode so meta is cached"
             );
-            println!("SPIKE {name}: label={:?} version={:?}", info.label, info.version_code);
+            println!(
+                "SPIKE {name}: label={:?} version={:?}",
+                info.label, info.version_code
+            );
         }
     }
 }

@@ -60,8 +60,7 @@ pub fn load_or_create(dir: &Path) -> std::io::Result<AppConfig> {
     }
 
     let raw = std::fs::read_to_string(&cfg_path)?;
-    serde_json::from_str(&raw)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+    serde_json::from_str(&raw).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
 }
 
 /// Persists `config` as pretty JSON to `<dir>/config.json`.

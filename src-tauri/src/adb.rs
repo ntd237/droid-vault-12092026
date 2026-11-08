@@ -39,7 +39,10 @@ pub struct Adb {
 
 impl Adb {
     pub fn new(path: impl Into<PathBuf>) -> Self {
-        Adb { path: path.into(), lock: Mutex::new(()) }
+        Adb {
+            path: path.into(),
+            lock: Mutex::new(()),
+        }
     }
 
     /// Run adb with args; the internal lock serializes all adb invocations.
@@ -71,9 +74,7 @@ impl Adb {
             };
             return Err(format!(
                 "adb {:?} exited with status {}: {}",
-                self.path,
-                output.status,
-                detail
+                self.path, output.status, detail
             ));
         }
 
@@ -166,7 +167,10 @@ pub fn parse_devices(output: &str) -> Vec<DeviceEntry> {
             "unauthorized" => DeviceState::Unauthorized,
             _ => DeviceState::Offline,
         };
-        devices.push(DeviceEntry { serial: serial.to_string(), state });
+        devices.push(DeviceEntry {
+            serial: serial.to_string(),
+            state,
+        });
     }
     devices
 }
@@ -237,14 +241,21 @@ mod tests {
 
     #[test]
     fn test_parse_devices_with_header_and_multiple_devices() {
-        let out = "List of devices attached\r\nemulator-5554\tdevice\r\ndead0beef\tunauthorized\r\n\r\n";
+        let out =
+            "List of devices attached\r\nemulator-5554\tdevice\r\ndead0beef\tunauthorized\r\n\r\n";
         let devices = parse_devices(out);
 
         assert_eq!(
             devices,
             vec![
-                DeviceEntry { serial: "emulator-5554".into(), state: DeviceState::Device },
-                DeviceEntry { serial: "dead0beef".into(), state: DeviceState::Unauthorized },
+                DeviceEntry {
+                    serial: "emulator-5554".into(),
+                    state: DeviceState::Device
+                },
+                DeviceEntry {
+                    serial: "dead0beef".into(),
+                    state: DeviceState::Unauthorized
+                },
             ]
         );
     }
@@ -257,8 +268,14 @@ mod tests {
         assert_eq!(
             devices,
             vec![
-                DeviceEntry { serial: "abc123".into(), state: DeviceState::Offline },
-                DeviceEntry { serial: "xyz789".into(), state: DeviceState::Offline },
+                DeviceEntry {
+                    serial: "abc123".into(),
+                    state: DeviceState::Offline
+                },
+                DeviceEntry {
+                    serial: "xyz789".into(),
+                    state: DeviceState::Offline
+                },
             ]
         );
     }
@@ -270,7 +287,10 @@ mod tests {
 
         assert_eq!(
             devices,
-            vec![DeviceEntry { serial: "abc123".into(), state: DeviceState::Device }]
+            vec![DeviceEntry {
+                serial: "abc123".into(),
+                state: DeviceState::Device
+            }]
         );
     }
 
@@ -287,7 +307,10 @@ mod tests {
         let out = "package:com.example.app\npackage:com.other.pkg\r\n";
         let pkgs = parse_package_list(out);
 
-        assert_eq!(pkgs, vec!["com.example.app".to_string(), "com.other.pkg".to_string()]);
+        assert_eq!(
+            pkgs,
+            vec!["com.example.app".to_string(), "com.other.pkg".to_string()]
+        );
     }
 
     #[test]
@@ -318,7 +341,10 @@ mod tests {
         let out = "package:/data/app/com.ex/split_config.en.apk\r\npackage:/data/app/com.ex/split_config.xxhdpi.apk\n";
         let path = parse_pm_path(out);
 
-        assert_eq!(path, Some("/data/app/com.ex/split_config.en.apk".to_string()));
+        assert_eq!(
+            path,
+            Some("/data/app/com.ex/split_config.en.apk".to_string())
+        );
     }
 
     #[test]
@@ -357,7 +383,10 @@ mod tests {
         let out = "43:/data/app/com.ex/split_config.en.apk\r\n47:/data/app/com.ex/split_config.xxhdpi.apk\n";
         let path = parse_pm_path(out);
 
-        assert_eq!(path, Some("/data/app/com.ex/split_config.en.apk".to_string()));
+        assert_eq!(
+            path,
+            Some("/data/app/com.ex/split_config.en.apk".to_string())
+        );
     }
 
     #[test]

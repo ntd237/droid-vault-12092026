@@ -127,9 +127,8 @@ pub fn parse_color(s: &str) -> Option<[u8; 4]> {
         let v = (c as char).to_digit(16).expect("checked hexdigit") as u8;
         v * 16 + v
     };
-    let pair = |i: usize| -> u8 {
-        u8::from_str_radix(&hex[i..i + 2], 16).expect("checked hexdigits")
-    };
+    let pair =
+        |i: usize| -> u8 { u8::from_str_radix(&hex[i..i + 2], 16).expect("checked hexdigits") };
     match hex.len() {
         3 => {
             let b = hex.as_bytes();
@@ -169,7 +168,10 @@ pub fn decode_vector(
     if nodes.is_empty() {
         return None;
     }
-    Some(VectorDrawable { viewport: (vw, vh), nodes })
+    Some(VectorDrawable {
+        viewport: (vw, vh),
+        nodes,
+    })
 }
 
 fn decode_nodes(
@@ -192,15 +194,21 @@ fn decode_nodes(
                     .attr("fillAlpha")
                     .and_then(|v| v.parse::<f32>().ok())
                     .unwrap_or(1.0);
-                nodes.push(VNode::Path { path_data, fill, fill_alpha });
+                nodes.push(VNode::Path {
+                    path_data,
+                    fill,
+                    fill_alpha,
+                });
             }
             "group" => {
                 let num = |name: &str, default: f32| {
-                    child.attr(name).and_then(|v| v.parse::<f32>().ok()).unwrap_or(default)
+                    child
+                        .attr(name)
+                        .and_then(|v| v.parse::<f32>().ok())
+                        .unwrap_or(default)
                 };
                 let mut group_clip = None;
-                let children =
-                    decode_nodes(child, res, read_entry, viewport, &mut group_clip)?;
+                let children = decode_nodes(child, res, read_entry, viewport, &mut group_clip)?;
                 nodes.push(VNode::Group {
                     translate: (num("translateX", 0.0), num("translateY", 0.0)),
                     rotation: num("rotation", 0.0),
@@ -324,7 +332,11 @@ pub fn parse_theme_attr_id(raw: &str) -> Option<u32> {
 /// Decode an Android `<gradient>` element into a [`VGradient`].
 /// `viewport` supplies defaults/geometry for angle-based linear and
 /// fraction-defaulted radial gradients.
-fn decode_gradient(root: &Element, res: &dyn ResourceResolver, viewport: (f32, f32)) -> Option<VGradient> {
+fn decode_gradient(
+    root: &Element,
+    res: &dyn ResourceResolver,
+    viewport: (f32, f32),
+) -> Option<VGradient> {
     let stops = gradient_stops(root, res)?;
     let num = |name: &str| root.attr(name).and_then(|v| v.parse::<f32>().ok());
     let kind = match root.attr("type").unwrap_or("linear") {
@@ -377,7 +389,9 @@ fn gradient_stops(root: &Element, res: &dyn ResourceResolver) -> Option<Vec<VSto
     }
     let start = gradient_color(root.attr("startColor")?, res)?;
     let end = gradient_color(root.attr("endColor")?, res)?;
-    let center = root.attr("centerColor").and_then(|c| gradient_color(c, res));
+    let center = root
+        .attr("centerColor")
+        .and_then(|c| gradient_color(c, res));
     Some(match center {
         Some(c) => vec![(start, 0.0), (c, 0.5), (end, 1.0)],
         None => vec![(start, 0.0), (end, 1.0)],
@@ -408,7 +422,10 @@ pub fn decode_shape(root: &Element, res: &dyn ResourceResolver) -> Option<Vector
     if root.childrens().any(|c| c.name() == "gradient") {
         return None;
     }
-    let solid_color = root.childrens().find(|c| c.name() == "solid")?.attr("color")?;
+    let solid_color = root
+        .childrens()
+        .find(|c| c.name() == "solid")?
+        .attr("color")?;
     let fill = VFill::Color(gradient_color(solid_color, res)?);
     let radius: f32 = root
         .childrens()
@@ -420,7 +437,12 @@ pub fn decode_shape(root: &Element, res: &dyn ResourceResolver) -> Option<Vector
     let v = ADAPTIVE_VIEWPORT;
     let path_data = if kind == "oval" {
         let r = v / 2.0;
-        format!("M0,{} A{r},{r} 0 1 1 {v},{} A{r},{r} 0 1 1 0,{} Z", fmt_num(r), fmt_num(r), fmt_num(r))
+        format!(
+            "M0,{} A{r},{r} 0 1 1 {v},{} A{r},{r} 0 1 1 0,{} Z",
+            fmt_num(r),
+            fmt_num(r),
+            fmt_num(r)
+        )
     } else if radius > 0.0 {
         let r = radius.min(v / 2.0);
         let (rr, xr, yr) = (fmt_num(r), fmt_num(v - r), fmt_num(v));
@@ -430,7 +452,11 @@ pub fn decode_shape(root: &Element, res: &dyn ResourceResolver) -> Option<Vector
     };
     Some(VectorDrawable {
         viewport: (v, v),
-        nodes: vec![VNode::Path { path_data, fill, fill_alpha: 1.0 }],
+        nodes: vec![VNode::Path {
+            path_data,
+            fill,
+            fill_alpha: 1.0,
+        }],
     })
 }
 
@@ -487,12 +513,20 @@ fn compose_svg_impl(icon: &AdaptiveIcon, crop: bool) -> String {
     }
     let viewbox = if crop {
         let off = fmt_num((ADAPTIVE_VIEWPORT - ADAPTIVE_SAFE_ZONE) / 2.0);
-        format!("{off} {off} {} {}", fmt_num(ADAPTIVE_SAFE_ZONE), fmt_num(ADAPTIVE_SAFE_ZONE))
+        format!(
+            "{off} {off} {} {}",
+            fmt_num(ADAPTIVE_SAFE_ZONE),
+            fmt_num(ADAPTIVE_SAFE_ZONE)
+        )
     } else {
         let v = fmt_num(ADAPTIVE_VIEWPORT);
         format!("0 0 {v} {v}")
     };
-    let defs = if defs.is_empty() { String::new() } else { format!("<defs>{defs}</defs>") };
+    let defs = if defs.is_empty() {
+        String::new()
+    } else {
+        format!("<defs>{defs}</defs>")
+    };
     format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" \
              xmlns:xlink=\"http://www.w3.org/1999/xlink\" \
@@ -517,7 +551,8 @@ fn render_layer(layer: &Layer, defs: &mut String, next_id: &mut u32, out: &mut S
             // silently drops the image on a mismatch, so WebP layers
             // embedded with the old hardcoded `image/png` vanished from
             // the render (background-only icons, T-H).
-            let mime = if bytes.starts_with(b"RIFF") && bytes.len() > 11 && &bytes[8..12] == b"WEBP" {
+            let mime = if bytes.starts_with(b"RIFF") && bytes.len() > 11 && &bytes[8..12] == b"WEBP"
+            {
                 "image/webp"
             } else {
                 "image/png"
@@ -546,7 +581,11 @@ fn render_layer(layer: &Layer, defs: &mut String, next_id: &mut u32, out: &mut S
 fn render_nodes(nodes: &[VNode], defs: &mut String, next_id: &mut u32, out: &mut String) {
     for node in nodes {
         match node {
-            VNode::Path { path_data, fill, fill_alpha } => {
+            VNode::Path {
+                path_data,
+                fill,
+                fill_alpha,
+            } => {
                 let (fill_attr, base_alpha) = match fill {
                     VFill::Color(c) => (format!("fill=\"{}\"", color_css(c)), c[3] as f32 / 255.0),
                     VFill::Gradient(g) => {
@@ -565,7 +604,14 @@ fn render_nodes(nodes: &[VNode], defs: &mut String, next_id: &mut u32, out: &mut
                 out.push_str(&opacity_attr("fill-opacity", opacity));
                 out.push_str("/>");
             }
-            VNode::Group { translate, rotation, pivot, scale, clip, children } => {
+            VNode::Group {
+                translate,
+                rotation,
+                pivot,
+                scale,
+                clip,
+                children,
+            } => {
                 // Android group matrix:
                 // M = translate(t + p) · rotate(r) · scale(s) · translate(-p).
                 out.push_str(&format!(
@@ -655,7 +701,9 @@ fn fmt_num(v: f32) -> String {
 }
 
 fn escape_attr(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('"', "&quot;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('"', "&quot;")
 }
 
 /// Minimal standard-alphabet base64 encoder (raster layers are embedded as
@@ -670,8 +718,16 @@ fn base64_encode(data: &[u8]) -> String {
         let n = (b1 << 16) | (b2 << 8) | b3;
         out.push(TABLE[(n >> 18) as usize & 63] as char);
         out.push(TABLE[(n >> 12) as usize & 63] as char);
-        out.push(if chunk.len() > 1 { TABLE[(n >> 6) as usize & 63] as char } else { '=' });
-        out.push(if chunk.len() > 2 { TABLE[n as usize & 63] as char } else { '=' });
+        out.push(if chunk.len() > 1 {
+            TABLE[(n >> 6) as usize & 63] as char
+        } else {
+            '='
+        });
+        out.push(if chunk.len() > 2 {
+            TABLE[n as usize & 63] as char
+        } else {
+            '='
+        });
     }
     out
 }
@@ -680,7 +736,11 @@ fn base64_encode(data: &[u8]) -> String {
 pub fn render_svg(svg: &str, size: u32) -> Option<Vec<u8>> {
     let tree = resvg::usvg::Tree::from_str(svg, &resvg::usvg::Options::default()).ok()?;
     let mut pixmap = tiny_skia::Pixmap::new(size, size)?;
-    resvg::render(&tree, tiny_skia::Transform::identity(), &mut pixmap.as_mut());
+    resvg::render(
+        &tree,
+        tiny_skia::Transform::identity(),
+        &mut pixmap.as_mut(),
+    );
     pixmap.encode_png().ok()
 }
 
@@ -786,7 +846,10 @@ fn background_keyed_bbox(pm: &tiny_skia::Pixmap) -> Option<(usize, usize, usize,
     for &(x, y) in &corners {
         let px = pm.pixel(x as u32, y as u32)?;
         let c = [px.red() as i32, px.green() as i32, px.blue() as i32];
-        if c.iter().zip(bg.iter()).any(|(v, b)| (v - b).abs() > NORMALIZE_BG_TOLERANCE as i32) {
+        if c.iter()
+            .zip(bg.iter())
+            .any(|(v, b)| (v - b).abs() > NORMALIZE_BG_TOLERANCE as i32)
+        {
             return None;
         }
     }
@@ -892,8 +955,7 @@ pub fn dominant_opaque_fraction(png_bytes: &[u8]) -> f32 {
     let Ok(pixmap) = tiny_skia::Pixmap::decode_png(png_bytes) else {
         return 0.0;
     };
-    let mut counts: std::collections::HashMap<(u8, u8, u8), u32> =
-        std::collections::HashMap::new();
+    let mut counts: std::collections::HashMap<(u8, u8, u8), u32> = std::collections::HashMap::new();
     let mut total = 0u32;
     for px in pixmap.data().chunks_exact(4) {
         if px[3] > 200 {
@@ -951,22 +1013,34 @@ pub fn adaptive_icon_png_res(
             if background.is_none() && foreground.is_none() {
                 return None;
             }
-            AdaptiveIcon { background, foreground }
+            AdaptiveIcon {
+                background,
+                foreground,
+            }
         }
         // Plain vector drawable used directly as the launcher icon.
         "vector" => {
             let vector = decode_vector(&axml.root, res, read_entry)?;
-            AdaptiveIcon { background: None, foreground: Some(Layer::Vector(vector)) }
+            AdaptiveIcon {
+                background: None,
+                foreground: Some(Layer::Vector(vector)),
+            }
         }
         // Shape drawables (rectangle/oval) used directly as the launcher icon.
         "shape" => {
             let vector = decode_shape(&axml.root, res)?;
-            AdaptiveIcon { background: None, foreground: Some(Layer::Vector(vector)) }
+            AdaptiveIcon {
+                background: None,
+                foreground: Some(Layer::Vector(vector)),
+            }
         }
         // Bitmap drawables reference a raster resource via android:src.
         "bitmap" => {
             let layer = decode_bitmap(&axml.root, res, read_entry)?;
-            AdaptiveIcon { background: None, foreground: Some(layer) }
+            AdaptiveIcon {
+                background: None,
+                foreground: Some(layer),
+            }
         }
         _ => return None,
     };
@@ -1086,8 +1160,12 @@ fn xml_bytes_to_layer(
                     .and_then(|v| v.parse::<f32>().ok())
                     .map_or(0.0, |p| (p / 100.0).clamp(0.0, 1.0))
             };
-            let (l, t, r, b) =
-                (pct("insetLeft"), pct("insetTop"), pct("insetRight"), pct("insetBottom"));
+            let (l, t, r, b) = (
+                pct("insetLeft"),
+                pct("insetTop"),
+                pct("insetRight"),
+                pct("insetBottom"),
+            );
             let v = ADAPTIVE_VIEWPORT;
             let (iw, ih) = (v * (1.0 - l - r), v * (1.0 - t - b));
             if iw <= 0.0 || ih <= 0.0 {
@@ -1097,8 +1175,11 @@ fn xml_bytes_to_layer(
             let mut body = String::new();
             let mut next_id = 0u32;
             render_layer(&inner, &mut defs, &mut next_id, &mut body);
-            let defs =
-                if defs.is_empty() { String::new() } else { format!("<defs>{defs}</defs>") };
+            let defs = if defs.is_empty() {
+                String::new()
+            } else {
+                format!("<defs>{defs}</defs>")
+            };
             let svg = format!(
                 "<svg xmlns=\"http://www.w3.org/2000/svg\" \
                      xmlns:xlink=\"http://www.w3.org/1999/xlink\" \
@@ -1128,7 +1209,10 @@ fn xml_bytes_to_layer(
             if background.is_none() && foreground.is_none() {
                 return None;
             }
-            let inner = AdaptiveIcon { background, foreground };
+            let inner = AdaptiveIcon {
+                background,
+                foreground,
+            };
             // Rendered at the 108dp layer size (safe-zone cropped), embedded
             // 1:1 by the parent.
             render_svg(&compose_adaptive_svg(&inner), ADAPTIVE_VIEWPORT as u32).map(Layer::Raster)
@@ -1155,12 +1239,15 @@ fn decode_layer_list(
         let layer = match item.attr("drawable") {
             Some(raw) => resolve_ref_token(&raw, res)
                 .and_then(|value| value_to_layer(&value, read_entry, res, depth + 1)),
-            None => item.childrens().next().and_then(|child| match child.name() {
-                "vector" => decode_vector(child, res, read_entry).map(Layer::Vector),
-                "shape" => decode_shape(child, res).map(Layer::Vector),
-                "bitmap" => decode_bitmap(child, res, read_entry),
-                _ => None,
-            }),
+            None => item
+                .childrens()
+                .next()
+                .and_then(|child| match child.name() {
+                    "vector" => decode_vector(child, res, read_entry).map(Layer::Vector),
+                    "shape" => decode_shape(child, res).map(Layer::Vector),
+                    "bitmap" => decode_bitmap(child, res, read_entry),
+                    _ => None,
+                }),
         };
         if let Some(layer) = layer {
             render_layer(&layer, &mut defs, &mut next_id, &mut body);
@@ -1171,7 +1258,11 @@ fn decode_layer_list(
         return None;
     }
     let v = ADAPTIVE_VIEWPORT;
-    let defs = if defs.is_empty() { String::new() } else { format!("<defs>{defs}</defs>") };
+    let defs = if defs.is_empty() {
+        String::new()
+    } else {
+        format!("<defs>{defs}</defs>")
+    };
     let svg = format!(
         "<svg xmlns=\"http://www.w3.org/2000/svg\" \
              xmlns:xlink=\"http://www.w3.org/1999/xlink\" \
@@ -1259,7 +1350,11 @@ mod tests {
         assert_eq!(vd.viewport, (24.0, 24.0));
         assert_eq!(vd.nodes.len(), 2);
         match &vd.nodes[0] {
-            VNode::Path { path_data, fill, fill_alpha } => {
+            VNode::Path {
+                path_data,
+                fill,
+                fill_alpha,
+            } => {
                 assert_eq!(path_data, "M10,10 L20,10 L20,20 Z");
                 assert_eq!(*fill, VFill::Color([0x33, 0x66, 0xCC, 0xFF]));
                 assert_eq!(*fill_alpha, 0.5);
@@ -1267,7 +1362,12 @@ mod tests {
             other => panic!("expected path, got {other:?}"),
         }
         match &vd.nodes[1] {
-            VNode::Group { translate, scale, children, .. } => {
+            VNode::Group {
+                translate,
+                scale,
+                children,
+                ..
+            } => {
                 assert_eq!(*translate, (10.5, 0.0));
                 assert_eq!(*scale, (1.0, 2.0));
                 assert_eq!(children.len(), 1);
@@ -1285,7 +1385,10 @@ mod tests {
         );
         root.append_child(el(
             "path",
-            &[("pathData", "M0,0 L1,1"), ("fillColor", "?attr/colorPrimary")],
+            &[
+                ("pathData", "M0,0 L1,1"),
+                ("fillColor", "?attr/colorPrimary"),
+            ],
         ));
 
         // Act/Assert: unsupported construct degrades to None.
@@ -1321,8 +1424,14 @@ mod tests {
     fn test_decode_adaptive_refs_extracts_background_and_foreground() {
         // Arrange: standard adaptive-icon shape.
         let mut root = el("adaptive-icon", &[]);
-        root.append_child(el("background", &[("drawable", "@color/ic_launcher_background")]));
-        root.append_child(el("foreground", &[("drawable", "@mipmap/ic_launcher_foreground")]));
+        root.append_child(el(
+            "background",
+            &[("drawable", "@color/ic_launcher_background")],
+        ));
+        root.append_child(el(
+            "foreground",
+            &[("drawable", "@mipmap/ic_launcher_foreground")],
+        ));
 
         // Act
         let (bg, fg) = decode_adaptive_refs(&root);
@@ -1362,13 +1471,27 @@ mod tests {
         let svg = compose_svg(&icon);
 
         // Assert: root geometry, background rect below foreground path.
-        assert!(svg.contains("width=\"192\""), "svg must be 192px wide: {svg}");
-        assert!(svg.contains("height=\"192\""), "svg must be 192px tall: {svg}");
-        assert!(svg.contains("viewBox=\"0 0 108 108\""), "adaptive viewport: {svg}");
+        assert!(
+            svg.contains("width=\"192\""),
+            "svg must be 192px wide: {svg}"
+        );
+        assert!(
+            svg.contains("height=\"192\""),
+            "svg must be 192px tall: {svg}"
+        );
+        assert!(
+            svg.contains("viewBox=\"0 0 108 108\""),
+            "adaptive viewport: {svg}"
+        );
         let rect_pos = svg.find("<rect").expect("background rect");
-        let scale_pos = svg.find("scale(4.5,4.5)").expect("vector scaled to 108 canvas");
+        let scale_pos = svg
+            .find("scale(4.5,4.5)")
+            .expect("vector scaled to 108 canvas");
         let path_pos = svg.find("d=\"M10,10 L20,10 L20,20 Z\"").expect("path data");
-        assert!(rect_pos < scale_pos && scale_pos < path_pos, "z-order bg<fg: {svg}");
+        assert!(
+            rect_pos < scale_pos && scale_pos < path_pos,
+            "z-order bg<fg: {svg}"
+        );
         assert!(svg.contains("fill=\"#3366cc\""), "path fill: {svg}");
     }
 
@@ -1418,7 +1541,9 @@ mod tests {
 
         // Assert: M = translate(t+p) rotate scale translate(-p).
         assert!(
-            svg.contains("transform=\"translate(12,23) rotate(45) scale(1.5,1.5) translate(-10,-20)\""),
+            svg.contains(
+                "transform=\"translate(12,23) rotate(45) scale(1.5,1.5) translate(-10,-20)\""
+            ),
             "android group matrix order: {svg}"
         );
     }
@@ -1445,7 +1570,10 @@ mod tests {
         let pos = svg.find("fill-opacity=\"").expect("opacity emitted");
         let rest = &svg[pos + "fill-opacity=\"".len()..];
         let val: f32 = rest.split('"').next().unwrap().parse().unwrap();
-        assert!((0.2..0.26).contains(&val), "combined alpha ~0.251, got {val}");
+        assert!(
+            (0.2..0.26).contains(&val),
+            "combined alpha ~0.251, got {val}"
+        );
     }
 
     // ---------- render_svg ----------
@@ -1465,7 +1593,10 @@ mod tests {
         // Assert: PNG magic + exact dimensions via tiny-skia decode.
         assert_eq!(&png[..4], b"\x89PNG");
         let pixmap = tiny_skia::Pixmap::decode_png(&png).expect("decodes as png");
-        assert_eq!((pixmap.width(), pixmap.height()), (OUTPUT_SIZE, OUTPUT_SIZE));
+        assert_eq!(
+            (pixmap.width(), pixmap.height()),
+            (OUTPUT_SIZE, OUTPUT_SIZE)
+        );
         // Center pixel must be red (non-trivial content).
         let px = pixmap.pixel(96, 96).expect("pixel exists");
         assert_eq!((px.red(), px.green(), px.blue()), (255, 0, 0));
@@ -1525,7 +1656,10 @@ mod tests {
         let svg = compose_adaptive_svg(&icon);
 
         // Assert
-        assert!(svg.contains("viewBox=\"18 18 72 72\""), "center crop: {svg}");
+        assert!(
+            svg.contains("viewBox=\"18 18 72 72\""),
+            "center crop: {svg}"
+        );
         assert!(svg.contains("width=\"192\""), "still 192px wide: {svg}");
         assert!(svg.contains("height=\"192\""), "still 192px tall: {svg}");
     }
@@ -1629,7 +1763,10 @@ mod tests {
         let pm = tiny_skia::Pixmap::decode_png(&out).expect("normalized output decodes");
         assert_eq!((pm.width(), pm.height()), (192, 192));
         let (bw, bh) = bbox_ratio(&pm);
-        assert!(bw >= 0.85 && bh >= 0.85, "content must fill canvas, got {bw:.3}x{bh:.3}");
+        assert!(
+            bw >= 0.85 && bh >= 0.85,
+            "content must fill canvas, got {bw:.3}x{bh:.3}"
+        );
     }
 
     #[test]
@@ -1644,7 +1781,10 @@ mod tests {
         let pm = tiny_skia::Pixmap::decode_png(&out).expect("normalized output decodes");
         assert_eq!((pm.width(), pm.height()), (192, 192));
         let (bw, bh) = bbox_ratio(&pm);
-        assert!(bw >= 0.85 && bh >= 0.85, "content must fill canvas, got {bw:.3}x{bh:.3}");
+        assert!(
+            bw >= 0.85 && bh >= 0.85,
+            "content must fill canvas, got {bw:.3}x{bh:.3}"
+        );
     }
 
     #[test]
@@ -1660,7 +1800,10 @@ mod tests {
         let pm = tiny_skia::Pixmap::decode_png(&out).expect("output decodes");
         assert_eq!((pm.width(), pm.height()), (192, 192));
         let (bw, bh) = bbox_ratio(&pm);
-        assert!(bw >= 0.99 && bh >= 0.99, "content must stay full-bleed, got {bw:.3}x{bh:.3}");
+        assert!(
+            bw >= 0.99 && bh >= 0.99,
+            "content must stay full-bleed, got {bw:.3}x{bh:.3}"
+        );
     }
 
     #[test]
@@ -1705,7 +1848,10 @@ mod tests {
         let layer = value_to_layer("res/tdA", &read, &NullResolver, 0);
 
         // Assert
-        assert!(matches!(layer, Some(Layer::Raster(_))), "webp magic must map to a raster layer");
+        assert!(
+            matches!(layer, Some(Layer::Raster(_))),
+            "webp magic must map to a raster layer"
+        );
     }
 
     #[test]
@@ -1718,7 +1864,10 @@ mod tests {
         let layer = value_to_layer("res/ZAU", &read, &NullResolver, 0);
 
         // Assert
-        assert!(matches!(layer, Some(Layer::Raster(_))), "png magic must map to a raster layer");
+        assert!(
+            matches!(layer, Some(Layer::Raster(_))),
+            "png magic must map to a raster layer"
+        );
     }
 
     #[test]
@@ -1730,8 +1879,14 @@ mod tests {
 
     /// Minimal `<vector>` element with one full-canvas path of `color`.
     fn full_vector_el(color: &str) -> Element {
-        let mut v = el("vector", &[("viewportWidth", "24"), ("viewportHeight", "24")]);
-        v.append_child(el("path", &[("pathData", "M0,0 L24,24 L24,0 Z"), ("fillColor", color)]));
+        let mut v = el(
+            "vector",
+            &[("viewportWidth", "24"), ("viewportHeight", "24")],
+        );
+        v.append_child(el(
+            "path",
+            &[("pathData", "M0,0 L24,24 L24,0 Z"), ("fillColor", color)],
+        ));
         v
     }
 
@@ -1765,8 +1920,14 @@ mod tests {
         unresolvable.append_child(el("item", &[("drawable", "@mipmap/does_not_exist")]));
 
         // Act/Assert
-        assert_eq!(decode_layer_list(&empty, &NullResolver, &no_read_entry, 0), None);
-        assert_eq!(decode_layer_list(&unresolvable, &NullResolver, &no_read_entry, 0), None);
+        assert_eq!(
+            decode_layer_list(&empty, &NullResolver, &no_read_entry, 0),
+            None
+        );
+        assert_eq!(
+            decode_layer_list(&unresolvable, &NullResolver, &no_read_entry, 0),
+            None
+        );
     }
 
     #[test]
@@ -1783,7 +1944,10 @@ mod tests {
         let pm = tiny_skia::Pixmap::decode_png(&out).expect("normalized output decodes");
         assert_eq!((pm.width(), pm.height()), (192, 192));
         let (bw, bh) = bbox_ratio(&pm);
-        assert!(bw >= 0.85 && bh >= 0.85, "content must fill canvas, got {bw:.3}x{bh:.3}");
+        assert!(
+            bw >= 0.85 && bh >= 0.85,
+            "content must fill canvas, got {bw:.3}x{bh:.3}"
+        );
         let px = pm.pixel(6, 6).expect("corner pixel exists");
         assert!(
             !(px.red() > 240 && px.green() > 240 && px.blue() > 240),
@@ -1809,7 +1973,10 @@ mod tests {
         let out = normalize_raster_png(&png).expect("decodes");
 
         // Assert
-        assert_eq!(out, png, "corner-heterogeneous opaque canvas must pass through");
+        assert_eq!(
+            out, png,
+            "corner-heterogeneous opaque canvas must pass through"
+        );
     }
 
     #[test]
@@ -1835,7 +2002,10 @@ mod tests {
         // Assert
         let pm = tiny_skia::Pixmap::decode_png(&out).expect("decodes");
         let (bw, bh) = bbox_ratio(&pm);
-        assert!(bw >= 0.85 && bh >= 0.85, "content must fill canvas, got {bw:.3}x{bh:.3}");
+        assert!(
+            bw >= 0.85 && bh >= 0.85,
+            "content must fill canvas, got {bw:.3}x{bh:.3}"
+        );
     }
 
     #[test]
@@ -1880,7 +2050,12 @@ mod tests {
                     path_data: "M0,0 H108 V108 H0 Z".to_string(),
                     fill: VFill::Gradient(VGradient {
                         stops: vec![([255, 0, 0, 255], 0.0), ([0, 0, 255, 255], 1.0)],
-                        kind: VGradientKind::Linear { x1: 0.0, y1: 0.0, x2: 108.0, y2: 0.0 },
+                        kind: VGradientKind::Linear {
+                            x1: 0.0,
+                            y1: 0.0,
+                            x2: 108.0,
+                            y2: 0.0,
+                        },
                     }),
                     fill_alpha: 1.0,
                 }],
@@ -1970,7 +2145,8 @@ mod tests {
         );
 
         // Act
-        let grad = decode_gradient(&g, &NullResolver, (108.0, 108.0)).expect("linear gradient decodes");
+        let grad =
+            decode_gradient(&g, &NullResolver, (108.0, 108.0)).expect("linear gradient decodes");
 
         // Assert: stops are start@0 / end@1, coordinates preserved.
         match grad.kind {
@@ -1993,7 +2169,8 @@ mod tests {
         );
 
         // Act
-        let grad = decode_gradient(&g, &NullResolver, (108.0, 108.0)).expect("item gradient decodes");
+        let grad =
+            decode_gradient(&g, &NullResolver, (108.0, 108.0)).expect("item gradient decodes");
 
         // Assert
         assert_eq!(grad.stops.len(), 3);
@@ -2017,7 +2194,8 @@ mod tests {
         );
 
         // Act
-        let grad = decode_gradient(&g, &NullResolver, (108.0, 108.0)).expect("radial gradient decodes");
+        let grad =
+            decode_gradient(&g, &NullResolver, (108.0, 108.0)).expect("radial gradient decodes");
 
         // Assert
         match grad.kind {
@@ -2031,19 +2209,33 @@ mod tests {
         // Arrange/Act/Assert: sweep type, radial without radius, and
         // gradients without any color source all degrade to None.
         let sweep = gradient_el(
-            &[("type", "sweep"), ("startColor", "#ff000000"), ("endColor", "#ffffffff")],
+            &[
+                ("type", "sweep"),
+                ("startColor", "#ff000000"),
+                ("endColor", "#ffffffff"),
+            ],
             &[],
         );
         assert_eq!(decode_gradient(&sweep, &NullResolver, (108.0, 108.0)), None);
 
         let no_radius = gradient_el(
-            &[("type", "radial"), ("startColor", "#ff000000"), ("endColor", "#ffffffff")],
+            &[
+                ("type", "radial"),
+                ("startColor", "#ff000000"),
+                ("endColor", "#ffffffff"),
+            ],
             &[],
         );
-        assert_eq!(decode_gradient(&no_radius, &NullResolver, (108.0, 108.0)), None);
+        assert_eq!(
+            decode_gradient(&no_radius, &NullResolver, (108.0, 108.0)),
+            None
+        );
 
         let no_colors = gradient_el(&[("type", "linear"), ("angle", "0")], &[]);
-        assert_eq!(decode_gradient(&no_colors, &NullResolver, (108.0, 108.0)), None);
+        assert_eq!(
+            decode_gradient(&no_colors, &NullResolver, (108.0, 108.0)),
+            None
+        );
     }
 
     #[test]
@@ -2082,7 +2274,12 @@ mod tests {
                 path_data: "M0,0 L10,10".to_string(),
                 fill: VFill::Gradient(VGradient {
                     stops: vec![([255, 0, 0, 255], 0.0), ([0, 0, 255, 255], 1.0)],
-                    kind: VGradientKind::Linear { x1: 0.0, y1: 0.0, x2: 108.0, y2: 0.0 },
+                    kind: VGradientKind::Linear {
+                        x1: 0.0,
+                        y1: 0.0,
+                        x2: 108.0,
+                        y2: 0.0,
+                    },
                 }),
                 fill_alpha: 1.0,
             }],
@@ -2099,7 +2296,10 @@ mod tests {
         );
         assert!(svg.contains("x1=\"0\""), "start x: {svg}");
         assert!(svg.contains("x2=\"108\""), "end x: {svg}");
-        assert!(svg.contains("fill=\"url(#g0)\""), "path references def: {svg}");
+        assert!(
+            svg.contains("fill=\"url(#g0)\""),
+            "path references def: {svg}"
+        );
         assert!(
             svg.contains("<stop offset=\"0\" stop-color=\"#ff0000\""),
             "stop 0: {svg}"
@@ -2119,7 +2319,11 @@ mod tests {
                 path_data: "M0,0 L10,10".to_string(),
                 fill: VFill::Gradient(VGradient {
                     stops: vec![([255, 0, 0, 255], 0.0), ([0, 0, 255, 255], 1.0)],
-                    kind: VGradientKind::Radial { cx: 75.5, cy: 55.0, r: 103.0 },
+                    kind: VGradientKind::Radial {
+                        cx: 75.5,
+                        cy: 55.0,
+                        r: 103.0,
+                    },
                 }),
                 fill_alpha: 1.0,
             }],
@@ -2132,7 +2336,10 @@ mod tests {
         assert!(svg.contains("<radialGradient"), "def emitted: {svg}");
         assert!(svg.contains("cx=\"75.5\""), "center x: {svg}");
         assert!(svg.contains("r=\"103\""), "radius: {svg}");
-        assert!(svg.contains("fill=\"url(#g0)\""), "path references def: {svg}");
+        assert!(
+            svg.contains("fill=\"url(#g0)\""),
+            "path references def: {svg}"
+        );
     }
 
     // ---------- clip-path (T-B) ----------
@@ -2211,8 +2418,13 @@ mod tests {
         assert_eq!(vd.viewport, (108.0, 108.0));
         assert_eq!(vd.nodes.len(), 1);
         match &vd.nodes[0] {
-            VNode::Path { path_data, fill, .. } => {
-                assert!(path_data.starts_with("M12,0"), "rounded rect path: {path_data}");
+            VNode::Path {
+                path_data, fill, ..
+            } => {
+                assert!(
+                    path_data.starts_with("M12,0"),
+                    "rounded rect path: {path_data}"
+                );
                 assert!(path_data.contains("A12,12"), "arc corners: {path_data}");
                 assert_eq!(*fill, VFill::Color([0x33, 0x66, 0xcc, 0xff]));
             }
@@ -2234,7 +2446,10 @@ mod tests {
         match &vd.nodes[0] {
             VNode::Path { path_data, .. } => {
                 assert!(path_data.contains("A54,54"), "ellipse arcs: {path_data}");
-                assert!(path_data.starts_with("M0,54"), "left-most point: {path_data}");
+                assert!(
+                    path_data.starts_with("M0,54"),
+                    "left-most point: {path_data}"
+                );
             }
             other => panic!("expected path, got {other:?}"),
         }
@@ -2383,12 +2598,18 @@ mod tests {
     fn test_adaptive_layer_missing_tag_or_unsupported_child_degrades() {
         // Arrange/Act/Assert
         let root = el("adaptive-icon", &[]);
-        assert_eq!(adaptive_layer(&root, "foreground", &MockResolver, &no_read_entry, 0), None);
+        assert_eq!(
+            adaptive_layer(&root, "foreground", &MockResolver, &no_read_entry, 0),
+            None
+        );
 
         let mut bg = el("background", &[]);
         bg.append_child(el("animated-selector", &[]));
         let mut root2 = el("adaptive-icon", &[]);
         root2.append_child(bg);
-        assert_eq!(adaptive_layer(&root2, "background", &MockResolver, &no_read_entry, 0), None);
+        assert_eq!(
+            adaptive_layer(&root2, "background", &MockResolver, &no_read_entry, 0),
+            None
+        );
     }
 }

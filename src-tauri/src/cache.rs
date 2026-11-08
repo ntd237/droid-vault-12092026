@@ -49,16 +49,20 @@ impl Cache {
     /// Creates dir (and parents) if missing.
     pub fn new(dir: &Path) -> io::Result<Self> {
         std::fs::create_dir_all(dir)?;
-        Ok(Cache { dir: dir.to_path_buf() })
+        Ok(Cache {
+            dir: dir.to_path_buf(),
+        })
     }
 
     /// Sanitize a package key: replace every char not in [a-zA-Z0-9._-] with '_'.
     pub fn sanitize_key(pkg: &str) -> String {
         pkg.chars()
-            .map(|c| if c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-' {
-                c
-            } else {
-                '_'
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '.' || c == '_' || c == '-' {
+                    c
+                } else {
+                    '_'
+                }
             })
             .collect()
     }
@@ -198,9 +202,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let cache = Cache::new(dir.path()).unwrap();
 
-        cache
-            .put_icon("com.example.app", 7, &[9, 9, 9])
-            .unwrap();
+        cache.put_icon("com.example.app", 7, &[9, 9, 9]).unwrap();
 
         assert_eq!(cache.get_icon("com.example.app", 8), None);
     }
@@ -218,12 +220,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let cache = Cache::new(dir.path()).unwrap();
 
-        cache
-            .put_icon("com.example.app", 7, &[1, 1, 1])
-            .unwrap();
-        let path = cache
-            .put_icon("com.example.app", 7, &[5, 5, 5, 5])
-            .unwrap();
+        cache.put_icon("com.example.app", 7, &[1, 1, 1]).unwrap();
+        let path = cache.put_icon("com.example.app", 7, &[5, 5, 5, 5]).unwrap();
 
         assert_eq!(fs::read(&path).unwrap(), vec![5, 5, 5, 5]);
         assert_eq!(cache.get_icon("com.example.app", 7), Some(vec![5, 5, 5, 5]));
@@ -251,10 +249,7 @@ mod tests {
 
         let meta = cache.load_meta();
         assert_eq!(meta.len(), 1);
-        assert_eq!(
-            meta.get("com.example.app"),
-            Some(&test_meta("Example", 7))
-        );
+        assert_eq!(meta.get("com.example.app"), Some(&test_meta("Example", 7)));
     }
 
     #[test]
@@ -271,10 +266,7 @@ mod tests {
 
         let meta = cache.load_meta();
         assert_eq!(meta.len(), 2);
-        assert_eq!(
-            meta.get("com.example.app"),
-            Some(&test_meta("Example", 7))
-        );
+        assert_eq!(meta.get("com.example.app"), Some(&test_meta("Example", 7)));
         assert_eq!(meta.get("org.other.app"), Some(&test_meta("Other", 12)));
     }
 
@@ -326,7 +318,10 @@ mod tests {
         let meta = cache.load_meta();
 
         // Assert: legacy caches are treated as "no meta" → force re-parse.
-        assert!(meta.is_empty(), "missing schema marker must invalidate all meta");
+        assert!(
+            meta.is_empty(),
+            "missing schema marker must invalidate all meta"
+        );
     }
 
     #[test]
@@ -348,7 +343,10 @@ mod tests {
         let meta = cache.load_meta();
 
         // Assert
-        assert!(meta.is_empty(), "mismatched schema must invalidate all meta");
+        assert!(
+            meta.is_empty(),
+            "mismatched schema must invalidate all meta"
+        );
     }
 
     #[test]
@@ -397,10 +395,7 @@ mod tests {
         assert_eq!(raw.get("_schema"), Some(&serde_json::json!(7)));
 
         let meta = cache.load_meta();
-        assert_eq!(
-            meta.get("com.example.app"),
-            Some(&test_meta("Example", 7))
-        );
+        assert_eq!(meta.get("com.example.app"), Some(&test_meta("Example", 7)));
     }
 
     #[test]
@@ -433,10 +428,7 @@ mod tests {
         let cache = Cache::new(dir.path()).unwrap();
 
         let path = cache.icon_path("com/example app", 42);
-        assert_eq!(
-            path,
-            dir.path().join("com_example_app_42.png")
-        );
+        assert_eq!(path, dir.path().join("com_example_app_42.png"));
         // Path is computed even if the file does not exist
         assert!(!path.exists());
     }
@@ -447,9 +439,27 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let cache = Cache::new(dir.path()).unwrap();
         let entries = vec![
-            ("com.a".to_string(), CachedMeta { label: "A".into(), version_code: 1 }),
-            ("com.b".to_string(), CachedMeta { label: "B".into(), version_code: 2 }),
-            ("com.c".to_string(), CachedMeta { label: "C".into(), version_code: 3 }),
+            (
+                "com.a".to_string(),
+                CachedMeta {
+                    label: "A".into(),
+                    version_code: 1,
+                },
+            ),
+            (
+                "com.b".to_string(),
+                CachedMeta {
+                    label: "B".into(),
+                    version_code: 2,
+                },
+            ),
+            (
+                "com.c".to_string(),
+                CachedMeta {
+                    label: "C".into(),
+                    version_code: 3,
+                },
+            ),
         ];
 
         // Act
@@ -468,14 +478,23 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let cache = Cache::new(dir.path()).unwrap();
         cache
-            .put_meta("com.old", &CachedMeta { label: "Old".into(), version_code: 9 })
+            .put_meta(
+                "com.old",
+                &CachedMeta {
+                    label: "Old".into(),
+                    version_code: 9,
+                },
+            )
             .unwrap();
 
         // Act
         cache
             .put_meta_many(&[(
                 "com.new".to_string(),
-                CachedMeta { label: "New".into(), version_code: 10 },
+                CachedMeta {
+                    label: "New".into(),
+                    version_code: 10,
+                },
             )])
             .unwrap();
 
