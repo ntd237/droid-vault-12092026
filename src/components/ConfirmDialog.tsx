@@ -67,7 +67,27 @@ export default function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-lg rounded-xl border border-zinc-200 bg-white p-6 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
-        {confirmPhase ? (
+        {confirmPhase && error ? (
+          // Standalone popup for upfront refusals (e.g. restoring user apps):
+          // message only, no list or action buttons to re-trigger the batch.
+          <>
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+              {isUninstall ? "Không thể gỡ cài đặt" : "Không thể khôi phục"}
+            </h2>
+            <div className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
+              {error}
+            </div>
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="rounded-lg border border-zinc-300 px-4 py-1.5 text-sm text-zinc-600 transition-colors hover:border-zinc-500 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:text-zinc-100"
+              >
+                Đóng
+              </button>
+            </div>
+          </>
+        ) : confirmPhase ? (
           <>
             <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
               {isUninstall ? "Xác nhận gỡ cài đặt" : "Xác nhận khôi phục"}
@@ -101,12 +121,6 @@ export default function ConfirmDialog({
               <div className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
                 Các ứng dụng sau thuộc danh sách cấm gỡ và sẽ bị bỏ qua:{" "}
                 <span className="font-mono text-xs">{blacklistedPkgs.join(", ")}</span>
-              </div>
-            )}
-
-            {error && (
-              <div className="mt-3 rounded-lg border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">
-                {error}
               </div>
             )}
 
@@ -166,6 +180,12 @@ export default function ConfirmDialog({
                     style={{ width: `${percent}%` }}
                   />
                 </div>
+
+                {running && progress?.package && (
+                  <p className="mt-2 truncate text-xs text-zinc-500 dark:text-zinc-400">
+                    Đang xử lý: {labels.get(progress.package) ?? progress.package}
+                  </p>
+                )}
 
                 {results.length > 0 && (
                   <ul className="mt-3 max-h-48 space-y-0.5 overflow-y-auto rounded-lg border border-zinc-200 bg-zinc-50 p-2 font-mono text-xs dark:border-zinc-800 dark:bg-zinc-800/40">
