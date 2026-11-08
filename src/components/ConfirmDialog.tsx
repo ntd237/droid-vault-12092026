@@ -60,7 +60,11 @@ export default function ConfirmDialog({
   const hasSystemApp = apps.some((a) => a.kind === "System");
   const isUninstall = mode === "uninstall";
   const confirmPhase = !running && results.length === 0 && summary === null;
-  const current = progress?.index ?? 0;
+  // While running, progress events carry the 0-based index of the app being
+  // processed (emitted BEFORE each attempt, with no final event — see
+  // packages.rs run_batch). Once finished, results is authoritative: it holds
+  // one entry per processed app, so the counter always ends at total.
+  const current = running ? (progress?.index ?? 0) : results.length;
   const percent =
     total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
 
