@@ -664,6 +664,40 @@ pub async fn get_apps(app: AppHandle) -> Result<Vec<packages::AppInfo>, String> 
     Ok(listing.apps)
 }
 
+/// Cheap device roster fingerprint: one adb spawn for the user+system
+/// package lists, hashed into a hex string (not u64 — JS numbers lose
+/// precision past 2^53, so the UI compares strings). The UI polls this to
+/// auto-rescan when apps are installed or removed outside the app.
+#[tauri::command]
+pub fn get_apps_signature(app: AppHandle) -> Result<String, String> {
+    let (serial, _cfg) = first_device_serial(&app)?;
+    let adb = get_or_init_adb(&app)?;
+    let device_adb = DeviceAdb {
+        adb,
+        serial: Some(serial),
+    };
+    let out = packages::AdbLike::run(
+        &device_adb,
+        &[
+            "shell",
+            &format!(
+                "pm list packages -3 --user 0; echo {sep}; pm list packages -s --user 0",
+                sep = packages::BATCHED_LIST_SEP
+            ),
+        ],
+    )
+    .map_err(|e| format!("Không đọc được danh sách gói từ thiết bị: {e}"))?;
+    let parts: Vec<&str> = out.split(packages::BATCHED_LIST_SEP).collect();
+    if parts.len() != 2 {
+        return Err("Đầu ra adb không đúng cấu trúc mong đợi".to_string());
+    }
+    let sig = packages::roster_signature(
+        &packages::parse_package_list(parts[0]),
+        &packages::parse_package_list(parts[1]),
+    );
+    Ok(format!("{sig:016x}"))
+}
+
 #[tauri::command]
 pub async fn uninstall_apps(
     app: AppHandle,

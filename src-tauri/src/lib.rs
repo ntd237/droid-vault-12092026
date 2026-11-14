@@ -25,6 +25,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::list_devices,
             commands::get_apps,
+            commands::get_apps_signature,
             commands::uninstall_apps,
             commands::restore_apps,
             commands::get_config,

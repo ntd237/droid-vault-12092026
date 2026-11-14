@@ -24,6 +24,12 @@ fn default_theme() -> String {
     "light".to_string()
 }
 
+/// Seconds between device-roster polls that trigger an automatic rescan
+/// when apps are installed/removed outside the app. 0 disables the poll.
+fn default_auto_rescan_secs() -> u32 {
+    5
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AppConfig {
     #[serde(default)]
@@ -32,6 +38,8 @@ pub struct AppConfig {
     pub blacklist: Vec<String>,
     #[serde(default = "default_theme")]
     pub theme: String, // "dark" | "light"
+    #[serde(default = "default_auto_rescan_secs")]
+    pub auto_rescan_secs: u32,
 }
 
 impl AppConfig {
@@ -40,6 +48,7 @@ impl AppConfig {
             adb_path: None,
             blacklist: default_blacklist(),
             theme: default_theme(),
+            auto_rescan_secs: default_auto_rescan_secs(),
         }
     }
 }
@@ -167,6 +176,7 @@ mod tests {
             adb_path: Some(adb.to_string_lossy().into_owned()),
             blacklist: default_blacklist(),
             theme: default_theme().to_string(),
+            auto_rescan_secs: default_auto_rescan_secs(),
         };
         let fake_dir = tempfile::tempdir().unwrap();
         let path_env = format!("{};C:\\Windows", fake_dir.path().to_string_lossy());
@@ -189,6 +199,7 @@ mod tests {
             adb_path: None,
             blacklist: default_blacklist(),
             theme: default_theme().to_string(),
+            auto_rescan_secs: default_auto_rescan_secs(),
         };
         let empty_dir = tempfile::tempdir().unwrap();
         let path_env = format!(
@@ -209,6 +220,7 @@ mod tests {
             adb_path: Some("Z:\\nonexistent\\adb.exe".to_string()),
             blacklist: default_blacklist(),
             theme: default_theme().to_string(),
+            auto_rescan_secs: default_auto_rescan_secs(),
         };
         let dir = tempfile::tempdir().unwrap();
         let adb = dir.path().join("adb.exe");
@@ -226,6 +238,7 @@ mod tests {
             adb_path: None,
             blacklist: default_blacklist(),
             theme: default_theme().to_string(),
+            auto_rescan_secs: default_auto_rescan_secs(),
         };
         let empty_dir = tempfile::tempdir().unwrap();
         let path_env = empty_dir.path().to_string_lossy().into_owned();

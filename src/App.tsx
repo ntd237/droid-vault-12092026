@@ -13,6 +13,8 @@ import { useTheme } from "./hooks/useTheme";
 import { useUpdater } from "./hooks/useUpdater";
 import {
   getApps,
+  getAppsSignature,
+  getConfig,
   listenAppResolved,
   listenBatchProgress,
   listenBatchResult,
@@ -174,6 +176,42 @@ function App() {
     };
   }, []);
 
+  const [rescanSecs, setRescanSecs] = useState(0);
+  useEffect(() => {
+    getConfig()
+      .then((cfg) => setRescanSecs(cfg.auto_rescan_secs))
+      .catch(() => {
+        // Config unavailable → keep polling disabled; manual refresh still works.
+      });
+  }, []);
+
+  // Auto-rescan when the device roster changes outside the app (an app
+  // installed or removed on the device): poll the cheap roster signature and
+  // rescan only when it differs from the last seen value.
+  const rosterSigRef = useRef<string | null>(null);
+  useEffect(() => {
+    rosterSigRef.current = null;
+  }, [scanKey]);
+  useEffect(() => {
+    if (status !== "connected" || running || rescanSecs <= 0) return;
+    const id = setInterval(() => {
+      if (loading || running) return;
+      getAppsSignature()
+        .then((sig) => {
+          if (rosterSigRef.current === null) {
+            rosterSigRef.current = sig;
+          } else if (rosterSigRef.current !== sig) {
+            rosterSigRef.current = sig;
+            void loadApps();
+          }
+        })
+        .catch(() => {
+          // adb busy or device gone — keep the baseline, retry next tick.
+        });
+    }, rescanSecs * 1000);
+    return () => clearInterval(id);
+  }, [status, running, loading, rescanSecs, loadApps]);
+
   const toggleApp = useCallback((pkg: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -186,18 +224,26 @@ function App() {
     });
   }, []);
 
-  const userCount = useMemo(
-    () => (apps ?? []).filter((a) => a.kind === "User").length,
+  // An uninstalled app is only worth showing dimmed when something can bring
+  // it back (install-existing, system kind); an uninstalled user app is gone
+  // for good and must not occupy the list.
+  const visibleApps = useMemo(
+    () => (apps ?? []).filter((a) => a.installed || a.restorable),
     [apps],
   );
+
+  const userCount = useMemo(
+    () => visibleApps.filter((a) => a.kind === "User").length,
+    [visibleApps],
+  );
   const systemCount = useMemo(
-    () => (apps ?? []).filter((a) => a.kind === "System").length,
-    [apps],
+    () => visibleApps.filter((a) => a.kind === "System").length,
+    [visibleApps],
   );
 
   const filteredApps = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return (apps ?? [])
+    return visibleApps
       .filter(
         (a) =>
           a.kind === activeTab &&
@@ -212,7 +258,19 @@ function App() {
           a.label.localeCompare(b.label, undefined, { sensitivity: "base" }) ||
           a.package.localeCompare(b.package),
       );
-  }, [apps, activeTab, search, installFilter]);
+  }, [visibleApps, activeTab, search, installFilter]);
+
+  // Keep the selection aligned with what is actually visible: rows that
+  // vanish (auto-rescan or in-place uninstall) must not stay counted as
+  // selected, otherwise the action bar targets invisible packages.
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const visible = new Set(visibleApps.map((a) => a.package));
+      const next = new Set([...prev].filter((p) => visible.has(p)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [visibleApps]);
 
   // Select-all adds every currently-filtered package of the ACTIVE tab.
   const selectAll = useCallback(() => {
@@ -276,17 +334,26 @@ function App() {
         const success = results.filter((r) => r.success).length;
         setBatchSummary({ success, failure: results.length - success });
         setSelected(new Set());
-        // Flip the affected rows in place — a full rescan after every batch
-        // re-pulls uncached APKs and stalls the UI for seconds.
-        setApps((prev) =>
-          prev
-            ? prev.map((a) =>
-                results.some((r) => r.package === a.package && r.success)
-                  ? { ...a, installed: mode === "uninstall" ? false : true }
-                  : a,
-              )
-            : prev,
+        // Update the affected rows in place — a full rescan after every batch
+        // re-pulls uncached APKs and stalls the UI for seconds. A successful
+        // uninstall drops non-restorable rows entirely; restorable (system)
+        // rows stay dimmed for a later restore.
+        const succeeded = new Set(
+          results.filter((r) => r.success).map((r) => r.package),
         );
+        setApps((prev) => {
+          if (!prev) return prev;
+          if (mode === "uninstall") {
+            return prev
+              .filter((a) => !(succeeded.has(a.package) && !a.restorable))
+              .map((a) =>
+                succeeded.has(a.package) ? { ...a, installed: false } : a,
+              );
+          }
+          return prev.map((a) =>
+            succeeded.has(a.package) ? { ...a, installed: true } : a,
+          );
+        });
       } catch (err) {
         setBatchError(err instanceof Error ? err.message : String(err));
       } finally {

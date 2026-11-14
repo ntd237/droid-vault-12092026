@@ -78,7 +78,7 @@ pub fn restorable_set(all_with_u: &[String], installed: &[String]) -> HashSet<St
 }
 
 /// Parse `pm list packages` output (adb.rs convention): lines "package:<name>".
-fn parse_package_list(output: &str) -> Vec<String> {
+pub(crate) fn parse_package_list(output: &str) -> Vec<String> {
     output
         .lines()
         .map(|l| l.trim())
@@ -289,6 +289,26 @@ pub fn list_apps_fast(adb: &dyn AdbLike, apk: &dyn ApkLike, cache: &dyn CacheLik
     );
 
     listing_from_parsed(adb, cache, user, system, user_all, system_all, version_map)
+}
+
+/// Pure: device roster signature — FNV-1a over the sorted package names,
+/// user and system fed as separate segments so a kind swap also changes the
+/// hash. Order-independent (adb may return lines in any order).
+pub fn roster_signature(user: &[String], system: &[String]) -> u64 {
+    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
+    let mut feed = |names: &[String]| {
+        let mut sorted: Vec<&str> = names.iter().map(String::as_str).collect();
+        sorted.sort_unstable();
+        for name in sorted {
+            for b in name.bytes().chain(std::iter::once(b'\n')) {
+                hash ^= b as u64;
+                hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
+            }
+        }
+    };
+    feed(user);
+    feed(system);
+    hash
 }
 
 /// Shell command (H4) that produces all 5 package listings in ONE adb spawn,
@@ -2703,5 +2723,69 @@ mod tests {
         assert!(cmd.contains("pm list packages -u -s --user 0"));
         assert!(cmd.contains("pm list packages --show-versioncode"));
         assert_eq!(cmd.matches(BATCHED_LIST_SEP).count(), 4);
+    }
+
+    // ---------- roster signature (auto-rescan poll) ----------
+
+    #[test]
+    fn test_roster_signature_changes_when_a_package_is_added() {
+        // Arrange: một app mới được cài trên thiết bị.
+        let user_a = vec!["com.a".to_string()];
+        let system_a: Vec<String> = vec![];
+        let user_b = vec!["com.a".to_string(), "com.b".to_string()];
+        let system_b: Vec<String> = vec![];
+
+        // Act
+        let sig_a = roster_signature(&user_a, &system_a);
+        let sig_b = roster_signature(&user_b, &system_b);
+
+        // Assert
+        assert_ne!(sig_a, sig_b);
+    }
+
+    #[test]
+    fn test_roster_signature_changes_when_a_package_is_removed() {
+        // Arrange: một app bị gỡ khỏi thiết bị.
+        let user_a = vec!["com.a".to_string(), "com.b".to_string()];
+        let user_b = vec!["com.b".to_string()];
+        let system: Vec<String> = vec![];
+
+        // Act
+        let sig_a = roster_signature(&user_a, &system);
+        let sig_b = roster_signature(&user_b, &system);
+
+        // Assert
+        assert_ne!(sig_a, sig_b);
+    }
+
+    #[test]
+    fn test_roster_signature_is_order_independent() {
+        // Arrange: cùng một danh sách gói, thứ tự dòng khác nhau (adb có thể
+        // trả về thứ tự không ổn định giữa các lần gọi).
+        let user_a = vec!["com.a".to_string(), "com.b".to_string()];
+        let user_b = vec!["com.b".to_string(), "com.a".to_string()];
+        let system: Vec<String> = vec![];
+
+        // Act
+        let sig_a = roster_signature(&user_a, &system);
+        let sig_b = roster_signature(&user_b, &system);
+
+        // Assert
+        assert_eq!(sig_a, sig_b);
+    }
+
+    #[test]
+    fn test_roster_signature_distinguishes_kind_swap() {
+        // Arrange: gói chuyển từ user sang system (cùng tên) phải đổi chữ ký.
+        let user_only = vec!["com.x".to_string()];
+        let system_only = vec!["com.x".to_string()];
+        let empty: Vec<String> = vec![];
+
+        // Act
+        let sig_user = roster_signature(&user_only, &empty);
+        let sig_system = roster_signature(&empty, &system_only);
+
+        // Assert
+        assert_ne!(sig_user, sig_system);
     }
 }

@@ -40,6 +40,8 @@ export interface AppConfig {
   adb_path: string | null;
   blacklist: string[];
   theme: string;
+  /** Giây giữa các lần poll danh sách gói để tự quét lại; 0 = tắt */
+  auto_rescan_secs: number;
 }
 
 export type InstallFilter = "all" | "installed" | "uninstalled";

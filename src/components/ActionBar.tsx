@@ -21,50 +21,54 @@ export default function ActionBar({
   const disabled = selectedCount === 0 || running;
 
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm text-zinc-500 dark:text-zinc-400">
-        Đã chọn: <span className="font-semibold text-zinc-900 dark:text-zinc-100">{selectedCount}</span>
-      </span>
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <span className="text-sm text-zinc-500 dark:text-zinc-400">
+          Đã chọn: <span className="font-semibold text-zinc-900 dark:text-zinc-100">{selectedCount}</span>
+        </span>
 
-      <button
-        type="button"
-        onClick={onSelectAll}
-        disabled={!canSelectAll}
-        className="text-sm text-zinc-500 underline-offset-2 transition-colors hover:text-zinc-800 hover:underline disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:text-zinc-200"
-      >
-        Chọn tất cả
-      </button>
-
-      <button
-        type="button"
-        onClick={onUninstall}
-        disabled={disabled}
-        className="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        Gỡ cài đặt
-      </button>
-
-      <button
-        type="button"
-        onClick={onRestore}
-        disabled={disabled}
-        className="rounded-lg border border-sky-600 px-4 py-1.5 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-600/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-sky-300"
-      >
-        Khôi phục
-      </button>
-
-      {selectedCount > 0 && (
         <button
           type="button"
-          onClick={onClear}
-          disabled={running}
+          onClick={onSelectAll}
+          disabled={!canSelectAll}
           className="text-sm text-zinc-500 underline-offset-2 transition-colors hover:text-zinc-800 hover:underline disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:text-zinc-200"
         >
-          Bỏ chọn
+          Chọn tất cả
         </button>
-      )}
 
-      {running && <span className="text-sm text-zinc-500">Đang thực hiện…</span>}
+        {selectedCount > 0 && (
+          <button
+            type="button"
+            onClick={onClear}
+            disabled={running}
+            className="text-sm text-zinc-500 underline-offset-2 transition-colors hover:text-zinc-800 hover:underline disabled:cursor-not-allowed disabled:opacity-40 dark:text-zinc-400 dark:hover:text-zinc-200"
+          >
+            Bỏ chọn
+          </button>
+        )}
+
+        {running && <span className="text-sm text-zinc-500">Đang thực hiện…</span>}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onUninstall}
+          disabled={disabled}
+          className="rounded-lg bg-red-600 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Gỡ cài đặt
+        </button>
+
+        <button
+          type="button"
+          onClick={onRestore}
+          disabled={disabled}
+          className="rounded-lg border border-sky-600 px-4 py-1.5 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-600/10 disabled:cursor-not-allowed disabled:opacity-40 dark:text-sky-300"
+        >
+          Khôi phục
+        </button>
+      </div>
     </div>
   );
 }

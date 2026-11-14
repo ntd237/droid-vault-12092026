@@ -18,6 +18,10 @@ export function getApps(): Promise<AppInfo[]> {
   return invoke("get_apps");
 }
 
+export function getAppsSignature(): Promise<string> {
+  return invoke("get_apps_signature");
+}
+
 export function uninstallApps(pkgs: string[]): Promise<BatchResult[]> {
   return invoke("uninstall_apps", { pkgs });
 }
